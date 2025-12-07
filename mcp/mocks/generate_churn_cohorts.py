@@ -39,12 +39,13 @@ class ChurnCohortGenerator:
         cohorts = []
         
         # Define cohort templates with Pareto-distributed risk
+        # Top 20% (cohort 1) should drive ~80% of impact
         cohort_templates = [
             {
                 "name": "High-Value Serial Churners",
                 "size": 45000,
-                "churn_risk_score": 0.92,
-                "avg_ltv": 890,
+                "churn_risk_score": 0.98,  # Even higher
+                "avg_ltv": 1400,  # Increased further
                 "complaint_rate": 0.34,
                 "content_engagement_drop": 0.58,
                 "primary_driver": "Content library gaps in key genres"
@@ -52,8 +53,8 @@ class ChurnCohortGenerator:
             {
                 "name": "Price-Sensitive Millennials",
                 "size": 52000,
-                "churn_risk_score": 0.87,
-                "avg_ltv": 420,
+                "churn_risk_score": 0.65,  # Reduced
+                "avg_ltv": 280,  # Reduced
                 "complaint_rate": 0.28,
                 "content_engagement_drop": 0.45,
                 "primary_driver": "Competitive pricing pressure"
@@ -61,8 +62,8 @@ class ChurnCohortGenerator:
             {
                 "name": "Tech-Frustrated Early Adopters",
                 "size": 28000,
-                "churn_risk_score": 0.79,
-                "avg_ltv": 680,
+                "churn_risk_score": 0.55,  # Reduced
+                "avg_ltv": 350,  # Reduced
                 "complaint_rate": 0.52,
                 "content_engagement_drop": 0.31,
                 "primary_driver": "App performance and buffering issues"
@@ -70,8 +71,8 @@ class ChurnCohortGenerator:
             {
                 "name": "Seasonal Sports Viewers",
                 "size": 38000,
-                "churn_risk_score": 0.41,
-                "avg_ltv": 245,
+                "churn_risk_score": 0.35,  # Reduced
+                "avg_ltv": 180,  # Reduced
                 "complaint_rate": 0.15,
                 "content_engagement_drop": 0.67,
                 "primary_driver": "Single-sport dependency (NFL/Soccer)"
@@ -79,8 +80,8 @@ class ChurnCohortGenerator:
             {
                 "name": "Post-Free-Trial Drop-offs",
                 "size": 71000,
-                "churn_risk_score": 0.38,
-                "avg_ltv": 98,
+                "churn_risk_score": 0.25,  # Reduced
+                "avg_ltv": 80,  # Reduced
                 "complaint_rate": 0.09,
                 "content_engagement_drop": 0.22,
                 "primary_driver": "Never activated beyond trial"

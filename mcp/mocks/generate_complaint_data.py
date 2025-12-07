@@ -35,11 +35,11 @@ class ComplaintDataGenerator:
         """
         # Pre-defined themes with Pareto distribution
         theme_templates = [
-            # Top 2 themes driving 70% of churn
+            # Top 2 themes driving 75%+ of churn
             {
                 "name": "Buffering/Streaming Quality",
-                "volume": 8420,
-                "churn_correlation": 0.68,
+                "volume": 11000,  # Increased more
+                "churn_correlation": 0.80,  # Increased more
                 "avg_sentiment": -0.72,
                 "keywords": ["buffering", "loading", "quality", "freezing", "lag"],
                 "fixable": True,
@@ -47,8 +47,8 @@ class ComplaintDataGenerator:
             },
             {
                 "name": "Content Library Gaps",
-                "volume": 6890,
-                "churn_correlation": 0.61,
+                "volume": 5800,  # Reduced
+                "churn_correlation": 0.55,  # Reduced
                 "avg_sentiment": -0.58,
                 "keywords": ["missing shows", "no content", "library", "selection", "removed"],
                 "fixable": True,
