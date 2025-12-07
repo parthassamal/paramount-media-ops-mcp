@@ -181,12 +181,7 @@ class ConvivaClient:
             rebuffering_ratio=random.uniform(0.002, 0.03)
         )
         
-        # Calculate rates
-        if base_metrics.plays > 0:
-            base_metrics.video_start_failure_rate = base_metrics.video_start_failures / base_metrics.plays
-            base_metrics.ebvs_rate = base_metrics.exits_before_video_start / base_metrics.plays
-        
-        # Add dimension-specific variations
+        # Add dimension-specific variations BEFORE calculating rates
         if dimension == "country":
             if dimension_value in ["IN", "BR", "ID"]:
                 # Higher buffering in emerging markets
@@ -208,6 +203,11 @@ class ConvivaClient:
             if dimension_value == "cdn_backup":
                 base_metrics.buffering_ratio *= 2.0
                 base_metrics.video_start_failures *= 2
+        
+        # Calculate rates AFTER dimension-specific variations
+        if base_metrics.plays > 0:
+            base_metrics.video_start_failure_rate = base_metrics.video_start_failures / base_metrics.plays
+            base_metrics.ebvs_rate = base_metrics.exits_before_video_start / base_metrics.plays
         
         return base_metrics.to_dict()
     

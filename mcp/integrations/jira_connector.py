@@ -274,7 +274,7 @@ class JiraConnector:
             List of production issue dictionaries
         """
         if self.mock_mode:
-            return self._get_mock_issues(status, severity, limit)
+            return self._get_mock_issues(status, severity, show_name, days_since_created, limit)
         
         return self._fetch_from_jira_sync(
             project or self.project_key,
@@ -289,6 +289,8 @@ class JiraConnector:
         self,
         status: Optional[List[str]],
         severity: Optional[str],
+        show_name: Optional[str],
+        days_since_created: Optional[int],
         limit: int
     ) -> List[Dict[str, Any]]:
         """Get mock production issues."""
@@ -305,6 +307,21 @@ class JiraConnector:
         
         if severity:
             issues = [i for i in issues if i["severity"] == severity]
+        
+        # Filter by show name
+        if show_name:
+            issues = [
+                i for i in issues 
+                if show_name.lower() in i.get("show", "").lower()
+            ]
+        
+        # Filter by days since created
+        if days_since_created:
+            cutoff_date = datetime.now() - timedelta(days=days_since_created)
+            issues = [
+                i for i in issues 
+                if datetime.fromisoformat(i.get("created", datetime.now().isoformat())) >= cutoff_date
+            ]
         
         return issues[:limit]
     
@@ -531,7 +548,7 @@ class JiraConnector:
             "critical_issues": [i for i in issues if i["severity"] == "critical"]
         }
     
-    async def create_issue(
+    def create_issue(
         self,
         summary: str,
         description: str,
@@ -564,6 +581,31 @@ class JiraConnector:
                 "created": datetime.now().isoformat()
             }
         
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        return loop.run_until_complete(
+            self._create_issue_async(
+                summary, description, issue_type, priority,
+                show_name, cost_impact, delay_days
+            )
+        )
+    
+    async def _create_issue_async(
+        self,
+        summary: str,
+        description: str,
+        issue_type: str,
+        priority: str,
+        show_name: Optional[str],
+        cost_impact: Optional[int],
+        delay_days: Optional[int]
+    ) -> Dict[str, Any]:
+        """Async implementation of create_issue."""
         fields = {
             "project": {"key": self.project_key},
             "summary": summary,
