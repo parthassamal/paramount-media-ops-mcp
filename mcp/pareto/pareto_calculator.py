@@ -127,8 +127,8 @@ class ParetoCalculator:
         top_20_indices = list(range(top_20_count))
         top_20_contribution = cumulative_contributions[top_20_count - 1] if top_20_count <= len(cumulative_contributions) else cumulative_contributions[-1]
         
-        # Validate Pareto principle
-        is_pareto_valid = self.validation_range[0] <= top_20_contribution <= self.validation_range[1]
+        # Validate Pareto principle (convert numpy.bool to Python bool)
+        is_pareto_valid = bool(self.validation_range[0] <= top_20_contribution <= self.validation_range[1])
         
         return ParetoResult(
             top_20_percent_indices=top_20_indices,
