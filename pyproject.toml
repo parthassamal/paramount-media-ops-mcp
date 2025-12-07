@@ -8,29 +8,65 @@ license = {text = "MIT"}
 authors = [
     {name = "Paramount Media Operations Team"}
 ]
-keywords = ["mcp", "streaming", "operations", "ai", "pareto-analysis"]
+keywords = [
+    "mcp",
+    "streaming",
+    "operations",
+    "ai",
+    "pareto-analysis",
+    "llm",
+    "fastapi",
+    "jira",
+    "conviva",
+    "newrelic"
+]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Framework :: FastAPI",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
 ]
 
 dependencies = [
-    "fastapi>=0.115.0",  # Security: ReDoS vulnerability patched
+    # Core API framework
+    "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
+    
+    # Data processing
     "numpy>=1.26.2",
     "pandas>=2.1.3",
-    "mcp>=1.23.0",  # Security: DNS rebinding, DoS vulnerabilities patched
+    
+    # MCP Protocol
+    "mcp>=1.23.0",
+    
+    # AI/LLM integration
     "anthropic>=0.40.0",
+    
+    # HTTP clients
     "requests>=2.31.0",
     "httpx>=0.27.0",
+    
+    # NLP (for email/complaint parsing)
     "scikit-learn>=1.3.2",
+    "textblob>=0.19.0",
+    "nltk>=3.8.0",
+    
+    # JIRA integration
+    "jira>=3.5.0",
+    
+    # Utilities
     "python-dotenv>=1.0.0",
     "python-dateutil>=2.8.2",
+    
+    # Logging
     "structlog>=23.2.0",
 ]
 
@@ -41,11 +77,25 @@ dev = [
     "pytest-cov>=4.1.0",
     "black>=23.12.0",
     "ruff>=0.1.7",
+    "mypy>=1.7.0",
+    "pre-commit>=3.6.0",
 ]
+
+[project.urls]
+"Homepage" = "https://github.com/parthassamal/paramount-media-ops-mcp"
+"Documentation" = "https://github.com/parthassamal/paramount-media-ops-mcp/blob/main/README.md"
+"Bug Tracker" = "https://github.com/parthassamal/paramount-media-ops-mcp/issues"
+
+[project.scripts]
+paramount-mcp = "mcp.server:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mcp*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -53,11 +103,78 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 asyncio_mode = "auto"
+addopts = "-v --tb=short"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
 
 [tool.black]
 line-length = 100
-target-version = ["py310"]
+target-version = ["py310", "py311", "py312"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | venv
+    | _build
+    | buck-out
+    | build
+    | dist
+)/
+'''
 
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+exclude = [
+    "venv",
+    ".venv",
+    "tests",
+]
+
+[tool.coverage.run]
+source = ["mcp"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/mocks/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
