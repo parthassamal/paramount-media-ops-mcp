@@ -228,10 +228,7 @@ class NewRelicClient:
             apdex_score=random.uniform(0.75, 0.99)
         )
         
-        # Calculate error count from rate and throughput
-        metrics.error_count = int(metrics.error_rate * metrics.throughput)
-        
-        # Service-specific variations
+        # Service-specific variations (apply before calculating error_count)
         if service:
             if "auth" in service.lower():
                 metrics.response_time_avg *= 0.5  # Auth is usually fast
@@ -242,6 +239,9 @@ class NewRelicClient:
             elif "payment" in service.lower():
                 metrics.error_rate *= 0.1  # Very critical
                 metrics.apdex_score = min(0.99, metrics.apdex_score * 1.05)
+        
+        # Calculate error count from rate and throughput AFTER service variations
+        metrics.error_count = int(metrics.error_rate * metrics.throughput)
         
         return metrics.to_dict()
     
@@ -354,9 +354,13 @@ class NewRelicClient:
         breakdown = []
         for service in services:
             metrics = self._generate_mock_apm_metrics(service)
+            # Map dict keys to APMMetrics dataclass fields
             apm = APMMetrics(
                 response_time_avg=metrics["response_time_avg_ms"],
+                response_time_p95=metrics["response_time_p95_ms"],
+                throughput=metrics["throughput_rpm"],
                 error_rate=metrics["error_rate"],
+                error_count=metrics["error_count"],
                 apdex_score=metrics["apdex_score"]
             )
             breakdown.append({
@@ -737,7 +741,7 @@ class NewRelicClient:
             "incidents": incidents
         }
     
-    async def run_nrql_query(self, query: str) -> Dict[str, Any]:
+    def run_nrql_query(self, query: str) -> Dict[str, Any]:
         """
         Execute custom NRQL query.
         
@@ -750,7 +754,19 @@ class NewRelicClient:
         if self.mock_mode:
             return {"mock": True, "message": "NRQL queries not available in mock mode"}
         
-        return await self._nrql_request(query)
+        return self._run_nrql_query_sync(query)
+    
+    def _run_nrql_query_sync(self, query: str) -> Dict[str, Any]:
+        """Synchronous wrapper for NRQL query."""
+        import asyncio
+        
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        return loop.run_until_complete(self._nrql_request(query))
     
     def get_operational_health_summary(self) -> Dict[str, Any]:
         """
