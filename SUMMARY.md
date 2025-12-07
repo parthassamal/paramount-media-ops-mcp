@@ -113,7 +113,7 @@ Successfully implemented a complete MCP (Model Context Protocol) server for Para
 
 ### Technology Stack
 - **Python**: 3.10+ (tested on 3.10, 3.11, 3.12)
-- **MCP SDK**: 1.1.2
+- **MCP SDK**: 1.23.0 (security-patched version)
 - **FastAPI**: 0.115.0
 - **JIRA**: 3.8.0
 - **NLP**: TextBlob 0.18.0
@@ -231,38 +231,31 @@ Once integrated, AI assistants can:
 
 ---
 
-## 📁 Project Structure
+## Technical Stack
 
 ```
 paramount-media-ops-mcp/
 ├── src/
-│   ├── __init__.py
-│   ├── server.py              # 600+ lines - Main MCP server
-│   ├── pareto_engine.py       # 80+ lines - Pareto analysis
-│   ├── jira_connector.py      # 150+ lines - JIRA integration
-│   ├── email_parser.py        # 200+ lines - NLP parser
-│   └── mock_data.py           # 180+ lines - Data generators
+│   ├── server.py              # Main MCP server (600+ lines)
+│   ├── pareto_engine.py       # Pareto analysis
+│   ├── jira_connector.py      # JIRA integration
+│   ├── email_parser.py        # NLP complaint parser
+│   └── mock_data.py           # Data generators
 ├── tests/
-│   ├── __init__.py
-│   ├── test_pareto_engine.py  # 6 tests
-│   ├── test_mock_data.py      # 5 tests
-│   ├── test_jira_connector.py # 5 tests
-│   └── test_email_parser.py   # 7 tests
+│   └── test_*.py              # 22 unit tests
 ├── .github/workflows/
 │   └── test.yml               # CI/CD pipeline
 ├── README.md                  # 350+ lines
-├── QUICKSTART.md              # Setup guide
-├── DEVELOPMENT.md             # Developer guide
+├── QUICKSTART.md              # Quick setup
+├── DEVELOPMENT.md             # Dev guide
 ├── example_usage.py           # Working demo
-├── config.example.py          # Configuration
-├── requirements.txt           # Dependencies
-├── LICENSE                    # MIT License
-└── .gitignore                 # Git ignore rules
-```
+└── requirements.txt           # Dependencies
 
 **Total Lines of Code**: ~2,500+
 **Test Coverage**: Core components covered
 **Documentation**: ~1,500+ lines
+**MCP SDK Version**: 1.23.0 (security-patched)
+```
 
 ---
 
