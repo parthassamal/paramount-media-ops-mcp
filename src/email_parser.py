@@ -1,6 +1,5 @@
 """Email Parser with NLP for Complaint Analysis"""
 from typing import List, Dict, Any, Optional
-import re
 from datetime import datetime
 from email.parser import Parser
 from email.policy import default
