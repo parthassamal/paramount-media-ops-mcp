@@ -18,13 +18,13 @@ classifiers = [
 ]
 
 dependencies = [
-    "fastapi>=0.104.1",
+    "fastapi>=0.109.1",  # Security: ReDoS vulnerability patched
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.5.0",
     "pydantic-settings>=2.1.0",
     "numpy>=1.26.2",
     "pandas>=2.1.3",
-    "mcp>=0.9.0",
+    "mcp>=1.23.0",  # Security: DNS rebinding, DoS vulnerabilities patched
     "anthropic>=0.7.7",
     "requests>=2.31.0",
     "httpx>=0.25.1",
