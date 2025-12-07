@@ -1,7 +1,6 @@
 """JIRA Connector for Production Issues"""
 from typing import List, Dict, Any, Optional
 import os
-from datetime import datetime
 from jira import JIRA
 from src.pareto_engine import ParetoAnalyzer
 from src.mock_data import MockDataGenerator
@@ -133,8 +132,9 @@ class JIRAConnector:
         """
         if self.use_mock or not self.client:
             # Mock creation
+            import random
             return {
-                "issue_id": f"PROD-{os.urandom(2).hex()}",
+                "issue_id": f"PROD-{random.randint(1000, 9999)}",
                 "status": "created_mock",
                 "message": "Mock issue created (no JIRA connection)"
             }
