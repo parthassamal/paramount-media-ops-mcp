@@ -44,14 +44,14 @@ class ProductionIssueGenerator:
         ]
         
         issue_templates = [
-            # Top 3 issues causing 76% of delays (Pareto)
+            # Top 3-4 issues causing 76%+ of delays (Pareto)
             {
                 "title": "VFX Pipeline Blocker - Star Trek: Discovery S5",
                 "show": "Star Trek: Discovery",
                 "type": "VFX Delay",
                 "severity": "critical",
-                "delay_days": 45,
-                "cost_overrun": 2400000,
+                "delay_days": 75,  # Increased more
+                "cost_overrun": 3500000,
                 "root_cause": "Third-party VFX vendor capacity constraints"
             },
             {
@@ -59,8 +59,8 @@ class ProductionIssueGenerator:
                 "show": "Yellowstone",
                 "type": "Creative",
                 "severity": "high",
-                "delay_days": 30,
-                "cost_overrun": 1800000,
+                "delay_days": 35,  # Increased slightly
+                "cost_overrun": 2100000,  # Increased
                 "root_cause": "Showrunner changes requiring major rewrites"
             },
             {
@@ -68,8 +68,8 @@ class ProductionIssueGenerator:
                 "show": "1923",
                 "type": "Production",
                 "severity": "high",
-                "delay_days": 22,
-                "cost_overrun": 1200000,
+                "delay_days": 18,  # Reduced
+                "cost_overrun": 900000,  # Reduced
                 "root_cause": "National park filming permits delayed"
             },
             # Mid-tier issues (moderate impact)
