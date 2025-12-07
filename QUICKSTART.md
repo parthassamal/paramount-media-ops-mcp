@@ -1,6 +1,6 @@
 # Quick Start Guide - Paramount+ MCP Server
 
-## 5-Minute Setup
+## ⚡ 5-Minute Setup
 
 ### 1. Installation
 
@@ -9,43 +9,72 @@
 git clone https://github.com/parthassamal/paramount-media-ops-mcp.git
 cd paramount-media-ops-mcp
 
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
 # Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Test the System
-
-Run the example demonstration:
+### 2. Validate Installation
 
 ```bash
-python example_usage.py
+python demo_usage.py
 ```
 
 You should see a complete demonstration of:
-- Churn analysis with Pareto insights
-- Production issue prioritization
-- Complaint theme analysis with NLP
-- Content ROI optimization
-- Executive summary with strategic recommendations
+- ✅ Churn analysis with Pareto insights
+- ✅ Production issue prioritization
+- ✅ Complaint theme analysis with NLP
+- ✅ Campaign generation with ROI projections
+- ✅ Executive summary with strategic recommendations
 
 ### 3. Start the MCP Server
 
 ```bash
-python -m src.server
+python -m mcp.server
 ```
 
-The server will start in stdio mode, ready to accept MCP protocol commands.
+The server will start on `http://localhost:8000`.
 
-### 4. Connect with Claude Desktop
+### 4. Verify Server Health
 
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+```bash
+curl http://localhost:8000/health
+```
+
+Expected response:
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "server_name": "paramount-media-ops-mcp",
+    "version": "0.1.0"
+  }
+}
+```
+
+### 5. Explore API Documentation
+
+Open in browser: http://localhost:8000/docs
+
+---
+
+## 🔌 Connect with Claude Desktop
+
+Add to your Claude Desktop config:
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`  
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "paramount-ops": {
       "command": "python",
-      "args": ["-m", "src.server"],
+      "args": ["-m", "mcp.server"],
       "cwd": "/absolute/path/to/paramount-media-ops-mcp"
     }
   }
@@ -54,75 +83,104 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 Replace `/absolute/path/to/paramount-media-ops-mcp` with your actual path.
 
-### 5. Test with Claude
+---
 
-Once connected, you can ask Claude:
-
-- "Show me the current churn signals"
-- "Analyze production issues using Pareto principle"
-- "What are the top complaint topics?"
-- "Forecast revenue for the next 12 months"
-- "Generate a retention campaign for high-risk users"
-
-## Available Resources
+## 📊 Available Resources
 
 Ask Claude to read any of these resources:
 
-- `paramount://churn_signals` - User churn risk data
-- `paramount://complaints_topics` - Customer complaints with NLP analysis
-- `paramount://production_issues` - JIRA production issues
-- `paramount://content_catalog` - Content performance and ROI
-- `paramount://international_markets` - Market-specific data
-- `paramount://revenue_analytics` - Revenue and subscription metrics
-- `paramount://engagement_metrics` - User engagement patterns
-- `paramount://pareto_insights` - Cross-domain 80/20 insights
-- `paramount://operational_dashboard` - Real-time KPIs
+| Resource | Description |
+|----------|-------------|
+| `churn_signals` | At-risk subscriber cohorts with Pareto analysis |
+| `complaints_topics` | NLP-analyzed customer complaints |
+| `production_issues` | JIRA production issues with cost/delay impact |
+| `content_catalog` | Content performance and ROI metrics |
+| `international_markets` | Regional market performance data |
+| `revenue_impact` | Financial correlations and projections |
+| `retention_campaigns` | Campaign tracking and performance |
+| `operational_efficiency` | Production pipeline metrics |
+| `pareto_analysis` | Cross-domain 80/20 insights |
 
-## Available Tools
+---
+
+## 🛠️ Available Tools
 
 Ask Claude to use these analysis tools:
 
-1. **analyze_churn_root_cause** - Identify why users are churning
-2. **analyze_complaint_themes** - Understand customer pain points
-3. **analyze_production_risk** - Assess system health and prioritize fixes
-4. **forecast_revenue_with_constraints** - Project future revenue
-5. **generate_retention_campaign** - Create targeted retention strategies
+| Tool | Description |
+|------|-------------|
+| `analyze_churn_root_cause` | Identify why users are churning |
+| `analyze_complaint_themes` | Understand customer pain points |
+| `analyze_production_risk` | Assess system health, prioritize fixes |
+| `forecast_revenue_with_constraints` | Project future revenue scenarios |
+| `generate_retention_campaign` | Create targeted retention strategies |
 
-## Optional: JIRA Integration
+---
 
-To connect to real JIRA data:
+## 💬 Example Queries for Claude
 
+Once the MCP server is connected, try these:
+
+### Strategic Overview
+> "Read the pareto_analysis resource and give me the top 3 priorities for this quarter"
+
+### Churn Analysis
+> "Analyze churn root causes and tell me which cohort needs immediate attention"
+
+### Production Health
+> "Analyze production risk with high severity and recommend what to fix first"
+
+### Customer Satisfaction
+> "Analyze complaint themes and show me the quick wins we can fix in 2 weeks"
+
+### Financial Planning
+> "Forecast revenue for 12 months with a $10M budget constraint"
+
+### Marketing Campaign
+> "Generate a retention campaign for COHORT-001 with $500,000 budget"
+
+---
+
+## ⚙️ Optional: External Integrations
+
+### JIRA Integration
 ```bash
-export JIRA_SERVER="https://your-domain.atlassian.net"
-export JIRA_EMAIL="your-email@domain.com"
+export JIRA_API_URL="https://your-domain.atlassian.net"
+export JIRA_API_EMAIL="your-email@domain.com"
 export JIRA_API_TOKEN="your-api-token"
 ```
 
-Without these credentials, the system uses realistic mock data.
+### Conviva Integration
+```bash
+export CONVIVA_API_URL="https://api.conviva.com/insights/2.4"
+export CONVIVA_CUSTOMER_KEY="your-customer-key"
+export CONVIVA_API_KEY="your-api-key"
+```
 
-## Example Queries for Claude
+### NewRelic Integration
+```bash
+export NEWRELIC_API_URL="https://api.newrelic.com/graphql"
+export NEWRELIC_API_KEY="your-api-key"
+export NEWRELIC_ACCOUNT_ID="your-account-id"
+```
 
-Try these with Claude once the MCP server is connected:
+Without these credentials, the system uses **realistic mock data** - perfect for demos!
 
-1. **Strategic Overview**:
-   "Read the pareto_insights resource and give me the top priorities for this quarter"
+---
 
-2. **Churn Analysis**:
-   "Analyze churn root causes for premium users over the last 60 days"
+## 🧪 Run Tests
 
-3. **Production Crisis**:
-   "Analyze production risk with severity threshold High and tell me what to fix first"
+```bash
+# Run all tests
+pytest tests/ -v
 
-4. **Customer Satisfaction**:
-   "Analyze complaint themes with urgency filter Critical and show sentiment trends"
+# Run with coverage
+pytest tests/ --cov=mcp --cov-report=term-missing
+```
 
-5. **Financial Planning**:
-   "Forecast revenue for 12 months in an optimistic scenario with max churn rate of 0.04"
+---
 
-6. **Marketing Campaign**:
-   "Generate a retention campaign for high_risk segment with $200,000 budget using email and push channels"
-
-## Troubleshooting
+## 🔧 Troubleshooting
 
 ### Import Errors
 ```bash
@@ -130,24 +188,30 @@ pip install --upgrade -r requirements.txt
 ```
 
 ### Server Won't Start
-Check Python version:
 ```bash
-python --version  # Should be 3.10+
+# Check Python version (requires 3.10+)
+python --version
+
+# Verify installation
+python -c "import mcp; print('OK')"
 ```
+
+### Connection Refused
+- Verify server is running on port 8000
+- Check firewall settings
+- Try `curl http://localhost:8000/health`
 
 ### JIRA Connection Issues
 The system automatically falls back to mock data if JIRA credentials are invalid or not provided.
 
-## Next Steps
+---
 
-1. Explore the `example_usage.py` script to understand the data structures
-2. Read the full README.md for detailed documentation
-3. Check `src/` directory for implementation details
-4. Customize mock data generators in `src/mock_data.py` for your use cases
+## 📚 Next Steps
 
-## Support
-
-For issues or questions, please open an issue on GitHub or contact the development team.
+1. Explore the `demo_usage.py` script to understand capabilities
+2. Read the full [README.md](./README.md) for detailed documentation
+3. Check [docs/INTEGRATION.md](./docs/INTEGRATION.md) for Claude integration
+4. Review [docs/API_EXAMPLES.md](./docs/API_EXAMPLES.md) for API usage
 
 ---
 
