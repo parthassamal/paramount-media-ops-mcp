@@ -17,6 +17,85 @@
 
 ---
 
+## 🔗 Figma API Integration (Enterprise)
+
+With Figma Enterprise, you can programmatically access design tokens and sync with the MCP server.
+
+### Setup
+
+1. **Get Personal Access Token**: Figma → Settings → Account → Personal access tokens
+2. **Configure Environment**:
+
+```bash
+# .env file
+FIGMA_ACCESS_TOKEN=your-personal-access-token
+FIGMA_TEAM_ID=your-team-id
+FIGMA_FILE_ID=your-dashboard-file-id
+```
+
+### Using the Figma Client
+
+```python
+from mcp.integrations import FigmaClient
+
+# Initialize client
+figma = FigmaClient()
+
+# Get design tokens
+tokens = figma.get_design_tokens("your-file-id")
+print(tokens["colors"])  # List of color tokens
+
+# Get complete design system
+design_system = figma.get_dashboard_design_system()
+print(design_system["components"])  # Dashboard components
+
+# Export to CSS variables
+css = figma.export_to_css_variables()
+print(css)
+# :root {
+#   --color-primary-blue: #0066FF;
+#   --color-success-green: #34D399;
+#   ...
+# }
+
+# Access Enterprise Variables API
+variables = figma.get_local_variables("your-file-id")
+for var in variables:
+    print(f"{var.name}: {var.value_by_mode}")
+```
+
+### Enterprise Features
+
+| Feature | Description | API Endpoint |
+|---------|-------------|--------------|
+| **Variables API** | Design tokens as variables with modes (light/dark) | `/files/{id}/variables/local` |
+| **Team Libraries** | Shared components across projects | `/teams/{id}/components` |
+| **Branching** | Version control for design files | `/files/{id}/branches` |
+| **Comments API** | Design feedback and annotations | `/files/{id}/comments` |
+| **Analytics** | Usage tracking for components | Enterprise Dashboard |
+
+### Figma MCP Server
+
+Figma now offers native MCP support! You can connect Figma directly to AI coding tools:
+
+```json
+{
+  "mcpServers": {
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/figma-mcp-server"],
+      "env": {
+        "FIGMA_ACCESS_TOKEN": "your-token"
+      }
+    }
+  }
+}
+```
+
+Learn more: [Figma MCP](https://www.figma.com/)
+
+---
+
 ## 📊 Dashboard Overview
 
 The Paramount+ Operations Dashboard provides real-time visibility into streaming operations, powered by the MCP server's Pareto-driven intelligence.

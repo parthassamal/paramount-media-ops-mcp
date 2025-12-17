@@ -238,6 +238,30 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     
     # ==========================================================================
+    # Figma Configuration
+    # Design system and dashboard design integration
+    # Enterprise features: Design systems, branching, analytics
+    # Figma MCP: https://www.figma.com/ - connects to AI coding tools
+    # ==========================================================================
+    figma_enabled: bool = True
+    figma_access_token: str = Field(
+        default="",
+        description="Figma Personal Access Token (Settings → Account → Personal access tokens)"
+    )
+    figma_team_id: str = Field(
+        default="",
+        description="Figma Team ID for shared component libraries"
+    )
+    figma_file_id: str = Field(
+        default="",
+        description="Figma file ID for the operations dashboard design"
+    )
+    figma_request_timeout: int = Field(
+        default=30,
+        description="Request timeout in seconds"
+    )
+    
+    # ==========================================================================
     # Data Configuration
     # ==========================================================================
     random_seed: int = 42

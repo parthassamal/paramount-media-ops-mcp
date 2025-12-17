@@ -245,7 +245,8 @@ async def health_check():
                 "jira": settings.jira_enabled,
                 "conviva": settings.conviva_enabled,
                 "newrelic": settings.newrelic_enabled,
-                "analytics": settings.analytics_enabled
+                "analytics": settings.analytics_enabled,
+                "figma": settings.figma_enabled
             },
             "timestamp": datetime.now().isoformat()
         }
