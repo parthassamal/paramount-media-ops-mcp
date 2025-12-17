@@ -339,6 +339,52 @@ class TestEmailParser:
         assert isinstance(trends, dict)
 
 
+class TestFigmaClient:
+    """Tests for Figma design system client."""
+    
+    def test_initialization_mock_mode(self):
+        """Test Figma client initializes in mock mode."""
+        from mcp.integrations import FigmaClient
+        
+        client = FigmaClient(mock_mode=True)
+        assert client.mock_mode is True
+    
+    def test_get_design_tokens(self):
+        """Test fetching design tokens."""
+        from mcp.integrations import FigmaClient
+        
+        client = FigmaClient(mock_mode=True)
+        tokens = client.get_design_tokens("test-file-id")
+        
+        assert "colors" in tokens
+        assert "typography" in tokens
+        assert "spacing" in tokens
+        assert len(tokens["colors"]) > 0
+    
+    def test_get_dashboard_design_system(self):
+        """Test fetching complete design system."""
+        from mcp.integrations import FigmaClient
+        
+        client = FigmaClient(mock_mode=True)
+        design_system = client.get_dashboard_design_system()
+        
+        assert "name" in design_system
+        assert "tokens" in design_system
+        assert "components" in design_system
+        assert "breakpoints" in design_system
+    
+    def test_get_file_components(self):
+        """Test fetching file components."""
+        from mcp.integrations import FigmaClient
+        
+        client = FigmaClient(mock_mode=True)
+        components = client.get_file_components("test-file-id")
+        
+        assert isinstance(components, list)
+        assert len(components) > 0
+        assert components[0].name is not None
+
+
 class TestIntegrationConsistency:
     """Tests for consistency across integrations."""
     
