@@ -9,6 +9,7 @@
 [![MCP](https://img.shields.io/badge/MCP-1.23+-7C3AED?style=flat-square)](https://modelcontextprotocol.io/)
 [![Tests](https://img.shields.io/badge/Tests-82%20Passing-34D399?style=flat-square)](./tests/)
 [![Figma](https://img.shields.io/badge/Figma-Dashboard-F24E1E?style=flat-square&logo=figma&logoColor=white)](./docs/DASHBOARD_DESIGN.md)
+[![Dashboard](https://img.shields.io/badge/React-Dashboard-61DAFB?style=flat-square&logo=react&logoColor=black)](./dashboard/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](./LICENSE)
 
 **AI-Driven Streaming Operations Platform | MCP Server | Pareto Intelligence**
@@ -454,6 +455,52 @@ The operations dashboard provides real-time visibility into streaming operations
 ```
 
 > **Note:** Replace `YOUR_FIGMA_FILE_ID` with your actual Figma file ID.
+
+---
+
+## 🖥️ React Dashboard (Figma Make)
+
+A fully functional React dashboard generated from Figma Make, featuring:
+- **KPI Cards**: Subscribers, churn rate, at-risk users, revenue impact
+- **Pareto Chart**: 77% impact from top 20% visualization
+- **Churn Cohorts**: Interactive bar chart with cohort breakdown
+- **Streaming Metrics**: Real-time QoE indicators
+- **Production Tracking**: JIRA integration status
+
+### Run the Dashboard
+
+```bash
+cd dashboard
+npm install
+npm run dev
+# → http://localhost:5173
+```
+
+### Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| React 18 | UI Framework |
+| Vite | Build Tool |
+| Tailwind CSS | Styling |
+| Recharts | Data Visualization |
+| Lucide React | Icons |
+| shadcn/ui | Component Library |
+
+### Screenshots
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Paramount+ Operations Dashboard                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  67.5M Subscribers │ 5.8% Churn │ 3.2M At-Risk │ $965M Revenue at Risk     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Top Churn Risk Cohorts          │  Pareto Analysis                        │
+│  ████████████ High-Value         │  77% of impact from top 20%             │
+│  ██████████ Price-Sensitive      │  ──●────●────●────●── Cumulative %      │
+│  ████████ Content-Starved        │                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
