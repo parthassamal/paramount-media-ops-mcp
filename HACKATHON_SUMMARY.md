@@ -195,6 +195,7 @@ pytest tests/test_integrations.py -v
 | [docs/API_EXAMPLES.md](./docs/API_EXAMPLES.md) | API usage examples |
 | [docs/RESOURCES.md](./docs/RESOURCES.md) | Resource documentation |
 | [docs/TOOLS.md](./docs/TOOLS.md) | Tool documentation |
+| [docs/DASHBOARD_DESIGN.md](./docs/DASHBOARD_DESIGN.md) | Figma dashboard specs |
 
 ---
 
@@ -242,9 +243,10 @@ pytest tests/test_integrations.py -v
 | Pareto Engine | ✅ Complete |
 | Integrations (JIRA/Conviva/NR) | ✅ Complete |
 | Mock Data Generators | ✅ Complete |
-| Test Suite (55 tests) | ✅ Complete |
+| Test Suite (82 tests) | ✅ Complete |
 | Documentation | ✅ Complete |
 | Demo Script | ✅ Complete |
+| Figma Dashboard Design | ✅ Complete |
 | Claude Integration | 🎯 Ready |
 
 ---

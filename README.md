@@ -7,7 +7,8 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![MCP](https://img.shields.io/badge/MCP-1.23+-7C3AED?style=flat-square)](https://modelcontextprotocol.io/)
-[![Tests](https://img.shields.io/badge/Tests-55%20Passing-34D399?style=flat-square)](./tests/)
+[![Tests](https://img.shields.io/badge/Tests-82%20Passing-34D399?style=flat-square)](./tests/)
+[![Figma](https://img.shields.io/badge/Figma-Dashboard-F24E1E?style=flat-square&logo=figma&logoColor=white)](./docs/DASHBOARD_DESIGN.md)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](./LICENSE)
 
 **AI-Driven Streaming Operations Platform | MCP Server | Pareto Intelligence**
@@ -16,8 +17,9 @@
 [Architecture](#-architecture) •
 [Resources](#-resources) •
 [Tools](#-tools) •
-[API Docs](#-api-documentation) •
-[Demo](#-demo)
+[Demo](#-demo) •
+[Figma](#-dashboard-design-figma) •
+[API Docs](#-api-documentation)
 
 </div>
 
@@ -396,6 +398,62 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   }
 }
 ```
+
+---
+
+## 🎨 Dashboard Design (Figma)
+
+<div align="center">
+
+<a href="https://www.figma.com/proto/YOUR_FIGMA_FILE_ID/Paramount-Media-Ops-Dashboard">
+  <img src="https://img.shields.io/badge/Figma-View%20Prototype-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="View Figma Prototype"/>
+</a>
+
+</div>
+
+The operations dashboard provides real-time visibility into streaming operations, powered by Pareto-driven intelligence.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  PARAMOUNT+ MEDIA OPERATIONS DASHBOARD                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐    │
+│  │ 📊 CHURN     │  │ 🎬 PRODUCTION│  │ 📺 STREAMING │  │ 💬 COMPLAINTS│    │
+│  │   $965M      │  │   1 Critical │  │   3.5% Buff  │  │   847 Open   │    │
+│  │   at risk    │  │   issue      │  │   ratio      │  │   tickets    │    │
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘    │
+│                                                                             │
+│  ┌─────────────────────────────────┐  ┌─────────────────────────────────┐  │
+│  │ PARETO ANALYSIS (80/20)         │  │ TOP PRIORITIES                  │  │
+│  │  Churn: ████████████░░░ 77%     │  │  1. Content library gaps $45M   │  │
+│  │  Prod:  ████████░░░░░░░ 72%     │  │  2. Streaming quality    $25M   │  │
+│  │  Compl: ██████░░░░░░░░░ 64%     │  │  3. Production delays    $15M   │  │
+│  └─────────────────────────────────┘  └─────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Design Resources
+
+| Resource | Link |
+|----------|------|
+| **Figma Prototype** | [Interactive Demo](https://www.figma.com/proto/YOUR_FIGMA_FILE_ID) |
+| **Design System** | [Components & Styles](https://www.figma.com/file/YOUR_FIGMA_FILE_ID?node-id=design-system) |
+| **Dashboard Specs** | [docs/DASHBOARD_DESIGN.md](./docs/DASHBOARD_DESIGN.md) |
+
+### Figma Embed (for presentations)
+
+```html
+<iframe 
+  style="border: 1px solid rgba(0, 0, 0, 0.1);" 
+  width="800" height="450" 
+  src="https://www.figma.com/embed?embed_host=share&url=https://www.figma.com/proto/YOUR_FIGMA_FILE_ID" 
+  allowfullscreen>
+</iframe>
+```
+
+> **Note:** Replace `YOUR_FIGMA_FILE_ID` with your actual Figma file ID.
 
 ---
 
