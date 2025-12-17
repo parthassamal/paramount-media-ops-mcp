@@ -54,3 +54,19 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+
+# =============================================================================
+# ALLOWED FILES (explicitly tracked)
+# =============================================================================
+# Video/Data files - these ARE tracked for demo purposes
+# Negation patterns ensure these are NOT ignored
+!*.mp4
+!*.avi
+!*.mov
+!*.mkv
+!sample_data/*.mp4
+!sample_data/*.avi
+!sample_data/*.mov
+
+# Sample data directory
+!sample_data/
