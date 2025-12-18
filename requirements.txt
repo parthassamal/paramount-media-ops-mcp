@@ -37,3 +37,6 @@ pytest-cov>=4.1.0
 
 # Logging
 structlog>=23.2.0
+
+# Adobe Cloud Services (optional - for PDF generation and cloud storage)
+# adobe-pdfservices-sdk>=3.5.0  # Uncomment if using Adobe PDF Services

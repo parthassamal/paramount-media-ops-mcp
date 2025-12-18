@@ -93,10 +93,24 @@ class Settings(BaseSettings):
     )
     
     # ==========================================================================
-    # Conviva Configuration
+    # Dynatrace Configuration
+    # Application Performance Monitoring and Full-Stack Observability
+    # ==========================================================================
+    dynatrace_enabled: bool = False
+    dynatrace_environment_url: str = Field(
+        default="",
+        description="Dynatrace environment URL (e.g., https://xxx.live.dynatrace.com)"
+    )
+    dynatrace_api_token: str = Field(
+        default="",
+        description="Dynatrace API token for authentication"
+    )
+    
+    # ==========================================================================
+    # Conviva Configuration (DEPRECATED - Using Dynatrace instead)
     # Streaming Quality of Experience (QoE) analytics
     # ==========================================================================
-    conviva_enabled: bool = True
+    conviva_enabled: bool = False
     conviva_api_url: str = Field(
         default="https://api.conviva.com/insights/2.4",
         description="Conviva Insights API base URL"
@@ -291,6 +305,33 @@ class Settings(BaseSettings):
     figma_request_timeout: int = Field(
         default=30,
         description="Request timeout in seconds"
+    )
+    
+    # ==========================================================================
+    # Adobe Cloud Services Configuration
+    # PDF generation and cloud storage
+    # ==========================================================================
+    adobe_pdf_enabled: bool = False
+    adobe_client_id: str = Field(
+        default="",
+        description="Adobe API client ID (from Adobe Developer Console)"
+    )
+    adobe_client_secret: str = Field(
+        default="",
+        description="Adobe API client secret"
+    )
+    adobe_organization_id: str = Field(
+        default="",
+        description="Adobe organization ID"
+    )
+    adobe_access_token: str = Field(
+        default="",
+        description="Adobe Cloud Storage access token"
+    )
+    adobe_storage_enabled: bool = False
+    adobe_storage_api_endpoint: str = Field(
+        default="https://cc-api-storage.adobe.io",
+        description="Adobe Cloud Storage API endpoint"
     )
     
     # ==========================================================================
