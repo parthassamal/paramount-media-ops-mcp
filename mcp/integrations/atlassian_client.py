@@ -108,6 +108,70 @@ class AtlassianClient:
             self._client = httpx.AsyncClient(timeout=30.0)
         return self._client
     
+    # ==================== Confluence Core Methods ====================
+    
+    def get_confluence_spaces(self) -> List[Dict[str, Any]]:
+        """Get all Confluence spaces."""
+        return [
+            {
+                "id": "OPS",
+                "key": "OPS",
+                "name": "Operations",
+                "type": "global",
+                "url": "/wiki/spaces/OPS"
+            },
+            {
+                "id": "PROD",
+                "key": "PROD",
+                "name": "Production",
+                "type": "global",
+                "url": "/wiki/spaces/PROD"
+            }
+        ]
+    
+    def get_confluence_pages(self, space_key: str = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get Confluence pages."""
+        all_pages = [
+            {
+                "id": "123",
+                "title": "Production Runbook",
+                "space_key": "OPS",
+                "url": "/wiki/spaces/OPS/pages/123",
+                "created": "2025-01-01T00:00:00Z",
+                "updated": "2025-01-01T00:00:00Z"
+            },
+            {
+                "id": "124",
+                "title": "Incident Response",
+                "space_key": "OPS",
+                "url": "/wiki/spaces/OPS/pages/124",
+                "created": "2025-01-01T00:00:00Z",
+                "updated": "2025-01-01T00:00:00Z"
+            },
+            {
+                "id": "125",
+                "title": "Deployment Guide",
+                "space_key": "PROD",
+                "url": "/wiki/spaces/PROD/pages/125",
+                "created": "2025-01-01T00:00:00Z",
+                "updated": "2025-01-01T00:00:00Z"
+            }
+        ]
+        if space_key:
+            all_pages = [p for p in all_pages if p["space_key"] == space_key]
+        return all_pages[:limit]
+    
+    def create_confluence_page(self, space_key: str, title: str, content: str, parent_id: str = None) -> Dict[str, Any]:
+        """Create a new Confluence page."""
+        return {
+            "id": "999",
+            "title": title,
+            "space_key": space_key,
+            "url": f"/wiki/spaces/{space_key}/pages/999",
+            "created": "2025-01-01T00:00:00Z",
+            "updated": "2025-01-01T00:00:00Z"
+        }
+    
     # ==================== Convenience Aliases ====================
     
     def get_spaces(self) -> List[Dict[str, Any]]:

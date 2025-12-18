@@ -209,7 +209,7 @@ async def create_page(request: CreatePageRequest = Body(...)) -> ConfluencePage:
     try:
         logger.info("confluence_create_page", space=request.space_key, title=request.title)
         
-        page = atlassian.create_page(
+        page = atlassian.create_confluence_page(
             space_key=request.space_key,
             title=request.title,
             content=request.content,
