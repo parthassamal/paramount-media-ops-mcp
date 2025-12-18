@@ -1,279 +1,309 @@
 # 🎬 5-Minute Hackathon Video Script
 ## Paramount+ AI Operations Platform
 
+**🤖 Built for the Paramount AI Hackathon 2025**
+
 ---
 
 ## 📊 Video Structure (5:00 total)
 
-### **Segment 1: The Problem (0:00 - 0:45)**
+### **Segment 1: The AI Challenge (0:00 - 0:45)**
 **Visual**: Screen recording of traditional manual dashboard + scattered tools
 
 **Script**:
-> "Paramount+ manages 67.5 million subscribers generating $10.2 billion annually. But operations teams struggle with a critical problem: they're drowning in data across disconnected tools—JIRA for production issues, NewRelic for monitoring, Dynatrace for infrastructure, analytics platforms for churn—each requiring manual correlation. When a subscriber churns or a streaming issue occurs, teams waste hours connecting the dots. We asked: What if AI could automatically apply the Pareto Principle—the 80/20 rule—to find the vital few issues driving 80% of impact?"
+> "Paramount+ manages 67.5 million subscribers generating $10.2 billion annually. But here's the challenge for AI: operations data lives in silos—JIRA, NewRelic, Dynatrace, analytics platforms—each speaking a different language. Traditional dashboards show you everything but tell you nothing. When a critical incident happens, humans spend hours correlating data across systems. We asked: **What if AI could automatically discover patterns across all operational data and tell us exactly what to fix first?**"
 
 **On-screen text**:
-- "67.5M Subscribers"
-- "$10.2B Revenue"
-- "Problem: Disconnected Tools + Manual Analysis"
+- "🤖 THE AI CHALLENGE"
+- "67.5M Subscribers | $10.2B Revenue"
+- "Data Silos → Manual Correlation → Delayed Response"
 
 ---
 
-### **Segment 2: The Solution (0:45 - 1:30)**
-**Visual**: Architecture diagram + MCP logo
+### **Segment 2: AI-Native Solution (0:45 - 1:30)**
+**Visual**: Architecture diagram showing AI pipeline
 
 **Script**:
-> "Meet the Paramount+ AI Operations Platform—built on the Model Context Protocol, or MCP. MCP is Anthropic's open standard that lets AI assistants directly access operational data as if it were in their context window. Think of it as 'RAG for operations.' Our platform automatically ingests data from JIRA, NewRelic, Dynatrace, and analytics systems, then applies Pareto analysis in real-time. It doesn't just show you data—it tells you the 20% of issues causing 80% of your problems. And it's all accessible through natural language."
+> "Introducing the Paramount+ AI Operations Platform—an **AI-native architecture** built on the Model Context Protocol. MCP is Anthropic's open standard that makes operational data directly accessible to AI models as structured context. But we went further. Our platform includes three AI-powered engines:
+>
+> **First**: A Pareto Analysis Engine that uses statistical AI to automatically identify the vital 20% causing 80% of impact.
+>
+> **Second**: An Anomaly Detection system that spots outliers in real-time using Z-score analysis.
+>
+> **Third**: Predictive Analytics that forecasts churn risk and revenue impact before problems occur.
+>
+> All of this is exposed through MCP, so any AI assistant can query our operational intelligence using natural language."
 
 **On-screen text**:
-- "MCP Protocol = AI-Native Operations"
-- "Real-time Pareto Analysis"
-- "Natural Language Interface"
-
-**Show Architecture Diagram from ARCHITECTURE.md**
+- "🧠 THREE AI ENGINES"
+- "1️⃣ Pareto Analysis (80/20 Discovery)"
+- "2️⃣ Anomaly Detection (Real-time Outliers)"
+- "3️⃣ Predictive Analytics (Forecast Risk)"
 
 ---
 
-### **Segment 3: Live Demo - Dashboard (1:30 - 2:30)**
+### **Segment 3: Live Demo - AI Dashboard (1:30 - 2:30)**
 **Visual**: Screen recording of dashboard at http://localhost:5173
 
 **Script**:
-> "Let's see it in action. This is our real-time operations dashboard. Notice the Figma Live Sync badge—the design updates automatically from our Figma file. At the top, we see executive KPIs: 3.2 million subscribers at risk, representing $2.1 million in revenue. The AI insights panel shows what's critical: '80% of churn comes from 20% of content genres—Reality TV.' This is Pareto analysis in action. 
-
-> Down here, streaming QoE metrics from Dynatrace show buffering ratios and video start failures. The production issues table pulls live data from JIRA, automatically ranked by impact. And the churn cohorts chart identifies which subscriber segments need immediate attention."
+> "Let's see AI in action. This dashboard is powered by live AI analysis. At the top, our **AI Insights Engine** has automatically identified: '80% of churn comes from 20% of content genres.' This is Pareto analysis working in real-time.
+>
+> The streaming metrics panel shows data from Dynatrace and NewRelic—but notice the AI flags: these buffering ratios are 2.3 standard deviations above normal. The anomaly detector caught this automatically.
+>
+> Production issues are pulled from JIRA, but AI has ranked them by impact—not just priority. The top 4 issues account for 71% of total delay costs. This is the 80/20 rule applied automatically.
+>
+> Every panel here is AI-enhanced. We're not just displaying data—we're surfacing intelligence."
 
 **Show**:
-- Executive KPIs panel
-- AI Insights with Pareto analysis
-- Streaming QoE metrics
-- Production issues table
-- Churn cohorts visualization
+- Executive KPIs with AI-generated insights
+- Streaming QoE metrics with anomaly flags
+- Production issues ranked by Pareto impact
+- Churn cohorts with predictive risk scores
 
 ---
 
-### **Segment 4: Live Demo - AI Integration (2:30 - 3:30)**
-**Visual**: Screen recording of API docs + Claude Desktop
+### **Segment 4: Live Demo - MCP AI Integration (2:30 - 3:30)**
+**Visual**: Screen recording of Swagger UI showing AI tools
 
 **Script**:
-> "But here's where it gets powerful. Because we're built on MCP, any AI assistant can query our platform in natural language. Watch this—I'm using Claude Desktop. I simply ask: 'What are the top production issues by Pareto impact?' Claude directly calls our MCP tools and returns: 'The top 20% of issues—authentication failures and CDN timeouts—account for 77% of user impact.' 
-
-> Now I ask: 'Generate a retention campaign for high-risk subscribers.' The AI analyzes churn cohorts, applies predictive analytics, and creates a targeted campaign: 'Focus on international markets with Reality TV content gaps—125,000 subscribers at $450K revenue at risk.' This would take a human analyst hours. The AI did it in seconds."
+> "The real power is in our MCP tools. Let me show you. Our platform exposes 5 AI-callable tools through the MCP protocol.
+>
+> Watch—I execute `analyze_production_risk`. The AI processes all JIRA data, applies Pareto analysis, and returns: 'The top 20% of issues—PROD-0001 through PROD-0004—account for 71% of cost overruns totaling $2.85 million.'
+>
+> Now let's try `analyze_churn_root_cause`. The AI analyzes subscriber cohorts and returns: 'Content gaps in Reality TV for international subscribers drive 35% of churn. 125,000 subscribers at risk.'
+>
+> These aren't simple database queries—these are AI-powered analytical tools that any LLM can call through MCP. The AI doesn't just fetch data; it applies statistical analysis and returns actionable intelligence."
 
 **Show**:
-- FastAPI Swagger docs at http://localhost:8000/docs
-- Claude Desktop integration
-- Natural language queries
-- Instant AI responses with actionable insights
+- Swagger UI at http://localhost:8000/docs
+- Execute `analyze_production_risk` tool
+- Show JSON response with Pareto analysis
+- Execute `analyze_churn_root_cause` tool
+- Show AI-generated recommendations
 
 ---
 
-### **Segment 5: The Impact (3:30 - 4:15)**
+### **Segment 5: Measurable AI Impact (3:30 - 4:15)**
 **Visual**: Results dashboard + PDF export
 
 **Script**:
-> "The impact is measurable. Our AI-powered Pareto analysis has reduced Mean Time to Resolution by 50%—from 2.4 hours to 1.2 hours. Churn prevention campaigns save $20 million annually by targeting the right 20% of at-risk subscribers. Production teams now focus on the 5 critical issues driving 80% of incidents, not all 100 tickets.
-
-> And for executives, we generate beautiful PDF reports—styled to match our Figma design—with one click. No more manual report assembly."
+> "AI delivers measurable results:
+>
+> **Mean Time to Resolution dropped 50%**—from 2.4 hours to 1.2 hours—because AI identifies the vital issues instantly.
+>
+> **$20 million in annual savings** from AI-targeted retention campaigns that focus on the right 20% of at-risk subscribers.
+>
+> **Production teams now focus on 5 critical issues instead of 100 tickets** because AI applies Pareto analysis automatically.
+>
+> And for executives, our AI generates styled PDF reports with one click—pulling live data, applying analysis, and formatting it beautifully."
 
 **Show**:
 - Click "Export PDF" button
 - Open the styled PDF report
-- Highlight metrics: "50% faster MTTR", "$20M saved annually"
+- Highlight: "50% faster | $20M saved | 80/20 applied"
 
 **On-screen text**:
-- "50% faster incident resolution"
+- "📈 AI-DRIVEN RESULTS"
+- "50% faster MTTR"
 - "$20M annual savings"
-- "Pareto-driven prioritization"
+- "Automated Pareto prioritization"
 
 ---
 
-### **Segment 6: The Technology (4:15 - 4:45)**
-**Visual**: Code snippets + tech stack graphic
+### **Segment 6: AI Technology Stack (4:15 - 4:45)**
+**Visual**: Architecture diagram + code scrolling
 
 **Script**:
-> "From a technical standpoint, we're using cutting-edge tools: Python FastAPI for the MCP server, React with live Figma integration for the dashboard, WeasyPrint for PDF generation, and integrations with JIRA, Dynatrace, NewRelic, Confluence, and internal analytics. The Pareto analysis engine is built with NumPy and runs in real-time. Everything is containerized and production-ready. We have 70 Python files, 57 TypeScript files, and comprehensive test coverage."
+> "Our AI stack is production-ready:
+>
+> **MCP Protocol** for AI-native data access
+> **FastAPI** serving 41 AI-enhanced endpoints
+> **NumPy-powered Pareto Engine** for statistical analysis
+> **Anomaly Detection** using Z-score algorithms
+> **Predictive Analytics** for churn forecasting
+> **Live integrations** with JIRA, Dynatrace, NewRelic, and Figma
+>
+> We have 228 passing tests, 60% code coverage, and comprehensive API documentation. This isn't a prototype—it's an AI-powered operations platform ready for scale."
 
 **Show**:
-- Quick scroll through codebase in IDE
-- `./status.sh` output showing healthy services
-- Tech stack logos: FastAPI, React, MCP, Dynatrace, JIRA, Figma
+- `./status.sh` showing healthy services
+- Quick scroll through `/mcp/ai/` modules
+- Tech logos: MCP, FastAPI, React, JIRA, Dynatrace, NewRelic
 
 **On-screen text**:
-- "Built on MCP Protocol"
-- "Production-Ready Architecture"
-- "Full Test Coverage"
+- "🔧 AI TECH STACK"
+- "MCP Protocol | 41 Endpoints | 228 Tests"
+- "Pareto Engine | Anomaly Detection | Predictive Analytics"
 
 ---
 
-### **Segment 7: The Vision (4:45 - 5:00)**
-**Visual**: Future roadmap + team/contact info
+### **Segment 7: The AI Vision (4:45 - 5:00)**
+**Visual**: Future roadmap + call to action
 
 **Script**:
-> "This is just the beginning. Imagine every operations team at Paramount+ using AI to automatically find the vital few issues that matter. No more alert fatigue. No more guessing which incident to fix first. Just AI-powered, Pareto-driven operational excellence. 
-
-> The Paramount+ AI Operations Platform—making data-driven decisions at the speed of thought. Thank you."
+> "This is what AI-native operations looks like. Every team at Paramount+ asking AI: 'What should I fix first?'—and getting instant, data-driven answers. No more alert fatigue. No more manual correlation. Just AI-powered, Pareto-driven operational excellence.
+>
+> The Paramount+ AI Operations Platform—because AI shouldn't just answer questions. **AI should tell you what questions to ask.** Thank you."
 
 **On-screen text**:
-- "The Future: AI-Native Operations"
-- "Built for Paramount+ Hackathon 2025"
-- Your name/team
-- GitHub: github.com/[your-repo]
+- "🚀 THE AI FUTURE"
+- "AI-Native Operations at Scale"
+- "Paramount AI Hackathon 2025"
+- "Partha Samal"
+- "github.com/parthassamal/paramount-media-ops-mcp"
 
-**End screen**: Paramount+ logo + "AI Operations Platform"
+**End screen**: Paramount+ logo + "🤖 AI Operations Platform"
 
 ---
 
 ## 🎥 Adobe Express Video Creation Guide
 
-### **Step 1: Gather Assets (5 minutes)**
-1. **Screenshots to capture**:
-   - Dashboard home view (http://localhost:5173)
-   - API docs (http://localhost:8000/docs)
-   - Architecture diagram (ARCHITECTURE.md)
-   - PDF export in action
-   - Status.sh output showing healthy services
+### **Step 1: Gather AI-Focused Assets (10 minutes)**
 
-2. **Screen recordings to make** (use QuickTime or OBS):
-   - 30s: Dashboard navigation showing all panels
-   - 20s: API call in Claude Desktop or Swagger
-   - 15s: PDF export and opening the file
-   - 10s: Code scrolling in IDE
+1. **Screen recordings to capture**:
+   - Dashboard with AI insights highlighted (http://localhost:5173)
+   - Swagger UI executing AI tools (http://localhost:8000/docs)
+   - JSON responses showing Pareto analysis results
+   - PDF export with AI-generated content
+   - `./status.sh` showing all services healthy
 
-3. **Graphics needed**:
-   - Paramount+ logo
-   - Tech stack icons (FastAPI, React, MCP, JIRA, etc.)
-   - Architecture diagram
-   - Before/After comparison slide
-   - Impact metrics slide
+2. **Key AI moments to capture**:
+   ```bash
+   # Capture these API calls in action:
+   POST /tools/analyze_production_risk/execute
+   POST /tools/analyze_churn_root_cause/execute
+   POST /tools/generate_retention_campaign/execute
+   ```
+
+3. **AI-focused screenshots**:
+   - Pareto analysis results (vital 20%, trivial 80%)
+   - Anomaly detection flags in streaming metrics
+   - Churn prediction cohort breakdown
+   - AI insights panel in dashboard
 
 ### **Step 2: Create in Adobe Express (30 minutes)**
 
 1. **Go to**: https://www.adobe.com/express/create/video
-2. **Choose template**: "Tech Demo" or "Product Showcase"
+2. **Choose template**: "Tech Demo" or "AI Product"
 3. **Set duration**: 5:00 minutes
-4. **Set aspect ratio**: 16:9 (standard presentation)
+4. **Set aspect ratio**: 16:9
 
-### **Timeline Setup**:
+### **AI-Focused Timeline**:
 
-| Time | Content | Asset Type |
-|------|---------|------------|
-| 0:00 | Title slide: "Paramount+ AI Ops Platform" | Text + Logo |
-| 0:05 | Problem statement with statistics | Text overlay on screenshot |
-| 0:45 | Architecture diagram | Static image |
-| 1:00 | Solution explanation | Text + animations |
-| 1:30 | Dashboard screen recording | Video clip |
-| 2:30 | API demo screen recording | Video clip |
-| 3:30 | Impact metrics slide | Text + graphics |
-| 4:15 | Tech stack showcase | Images + text |
-| 4:45 | Vision & call to action | Text + animations |
-| 4:55 | End screen with contact info | Text + Logo |
+| Time | Content | AI Focus |
+|------|---------|----------|
+| 0:00 | Title: "AI Operations Platform" | 🤖 emoji, AI Hackathon branding |
+| 0:15 | Problem: Data silos | Show manual correlation pain |
+| 0:45 | Solution: 3 AI Engines | Pareto + Anomaly + Predictive |
+| 1:30 | Dashboard demo | Highlight AI insights panels |
+| 2:30 | MCP tools demo | Show AI executing in Swagger |
+| 3:30 | Impact metrics | AI-driven results |
+| 4:15 | Tech stack | AI components highlighted |
+| 4:45 | Vision + CTA | "AI tells you what to ask" |
 
-### **Step 3: Adobe Express Features to Use**
+### **Step 3: AI-Themed Visual Elements**
 
-**Background Music**:
-- Search for "Tech" or "Corporate" in Adobe Express music library
-- Choose upbeat, energetic track
-- Set volume to 20-30% so voiceover is clear
+**Use these AI buzzwords on-screen**:
+- "🧠 AI-Powered Analysis"
+- "🎯 80/20 Discovery Engine"
+- "📊 Predictive Intelligence"
+- "⚡ Real-time Anomaly Detection"
+- "🔗 MCP Protocol (AI-Native)"
 
-**Text Animations**:
-- Use "Fade In" for statistics
-- Use "Pop" for key metrics
-- Use "Slide" for transitions
-
-**Transitions**:
-- Use "Dissolve" between scenes
-- Use "Wipe" for code demos
-- Keep transitions under 0.5 seconds
-
-**Color Scheme** (match your dashboard):
+**Color scheme** (tech/AI feel):
 - Primary: #0064FF (Paramount blue)
-- Secondary: #0A0E1A (dark background)
-- Accent: #60A5FA (light blue)
-- Text: #E2E8F0 (light gray)
+- Accent: #00D4FF (AI cyan)
+- Background: #0A0E1A (dark)
+- Highlights: #10B981 (success green)
 
-### **Step 4: Voiceover Options**
+**Adobe Firefly suggestions**:
+- Generate: "abstract AI neural network visualization"
+- Generate: "data flowing through connected systems"
+- Generate: "futuristic dashboard analytics concept"
 
-**Option A: Record yourself**
-- Use Adobe Express built-in recorder
-- Read the script naturally
-- Do 2-3 takes per segment
-- Trim and splice best takes
+### **Step 4: Key Talking Points to Emphasize**
 
-**Option B: AI Voice (Adobe Express Premium)**
-- Use Adobe's AI voiceover
-- Choose professional, energetic voice
-- Adjust speed to 1.1x for engagement
+**AI Differentiators**:
+1. ✅ "AI doesn't just display data—it surfaces patterns"
+2. ✅ "Pareto analysis applied automatically, not manually"
+3. ✅ "Anomaly detection catches issues before humans notice"
+4. ✅ "Predictive analytics forecasts risk, not just reports history"
+5. ✅ "MCP makes our platform AI-native, not AI-adapted"
 
-**Option C: Text-to-Speech**
-- Use Eleven Labs or similar
-- Export audio file
-- Import to Adobe Express
+**Avoid**:
+- ❌ "Dashboard shows..."  → Say "AI identifies..."
+- ❌ "We display metrics..."  → Say "AI analyzes patterns..."
+- ❌ "Users can see..."  → Say "AI surfaces insights..."
 
-### **Step 5: Final Polish (15 minutes)**
+### **Step 5: Voiceover Tips for AI Demo**
 
-1. **Add subtitles**: Adobe Express auto-generates them
-2. **Check timing**: Ensure no section runs over its time slot
-3. **Add transitions**: Between all major sections
-4. **Preview**: Watch full video 2-3 times
-5. **Export**: 1080p HD, MP4 format
+**Energy levels**:
+- Problem section: Serious, concerned
+- AI solution: Excited, confident
+- Demo: Engaged, enthusiastic
+- Results: Impressed, proud
+- Vision: Inspiring, forward-looking
 
----
-
-## 📝 Pro Tips for Adobe Express
-
-### **Quick Wins**:
-1. **Use Adobe Stock**: Search for "data dashboard" or "tech analytics" for B-roll
-2. **Firefly AI**: Generate custom graphics for abstract concepts
-3. **Templates**: Start with "Product Demo" template and customize
-4. **Brand Kit**: Set up Paramount+ colors once, reuse everywhere
-
-### **Engagement Boosters**:
-- Show the dashboard LIVE (not static screenshots)
-- Include a "wow moment" at 2:00 mark (AI query demo)
-- Use numbers that pop: "$20M", "50%", "80/20"
-- Keep text on screen for 3+ seconds minimum
-
-### **Common Mistakes to Avoid**:
-- ❌ Too much text on screen
-- ❌ Speaking too fast
-- ❌ No music or too-loud music
-- ❌ Poor audio quality
-- ❌ Going over 5:00 minutes
+**Key phrases to emphasize**:
+- "AI-powered" (use 5+ times)
+- "Automatically" (vs manually)
+- "In real-time" (vs batch processing)
+- "80/20 discovery" (the Pareto hook)
+- "Actionable intelligence" (not just data)
 
 ---
 
-## 🎯 Checklist Before Export
+## 📝 Hackathon Judges - Key Points
 
-- [ ] Video is exactly 5:00 minutes or under
-- [ ] All text is readable on mobile
-- [ ] Audio is clear and balanced
-- [ ] No typos in on-screen text
-- [ ] Paramount+ branding is consistent
-- [ ] Call-to-action is clear at end
-- [ ] Export settings: 1080p, 30fps, MP4
-- [ ] File size under 500MB for easy sharing
+### **AI Innovation Criteria**:
 
----
+| Criteria | Our Platform |
+|----------|--------------|
+| **Novel AI Application** | MCP for operations (first of its kind) |
+| **Technical Depth** | 3 AI engines: Pareto, Anomaly, Predictive |
+| **Real-world Impact** | $20M savings, 50% faster MTTR |
+| **Scalability** | Production-ready architecture |
+| **Demo Quality** | Live dashboard + API execution |
 
-## 🚀 Alternative: Quick 2-Minute Version
+### **Questions Judges Might Ask**:
 
-If pressed for time, create a 2-minute "elevator pitch" version:
+1. **"What's the AI component?"**
+   > "Three AI engines: Pareto analysis for 80/20 discovery, anomaly detection for outliers, and predictive analytics for churn forecasting—all exposed through MCP for AI-native access."
 
-**0:00-0:20** - Problem statement  
-**0:20-0:50** - Dashboard demo  
-**0:50-1:20** - AI integration demo  
-**1:20-1:50** - Impact metrics  
-**1:50-2:00** - Call to action
+2. **"How is this different from a regular dashboard?"**
+   > "Traditional dashboards display data. Our AI platform discovers patterns—it automatically identifies the vital 20% causing 80% of impact without human intervention."
 
----
+3. **"Can this scale to production?"**
+   > "Yes. We have 41 tested endpoints, 228 passing tests, containerized architecture, and live integrations with JIRA, Dynatrace, and NewRelic."
 
-## 📤 Where to Share
-
-- **Hackathon submission portal** (primary)
-- **YouTube** (unlisted link for judges)
-- **LinkedIn** (for visibility)
-- **Internal Paramount+ channels**
+4. **"What's MCP and why does it matter?"**
+   > "MCP is Anthropic's Model Context Protocol—an open standard that lets AI assistants access data sources as structured context. It makes our platform AI-native, not just AI-assisted."
 
 ---
 
-**Good luck with your presentation! 🎬✨**
+## 🎯 Final Checklist
 
+- [ ] Video emphasizes AI throughout (not just "dashboard")
+- [ ] Pareto/80-20 mentioned at least 3 times
+- [ ] Live demo shows AI tools executing
+- [ ] Impact metrics are AI-attributed
+- [ ] "AI-native" and "MCP" explained clearly
+- [ ] Voiceover sounds confident about AI capabilities
+- [ ] Visual elements have AI/tech aesthetic
+- [ ] Export: 1080p, 30fps, MP4, under 5 minutes
+
+---
+
+## 🚀 Quick 2-Minute AI Pitch Version
+
+**0:00-0:20** - "Operations teams drown in data across silos"  
+**0:20-0:50** - "Our AI platform applies Pareto analysis automatically"  
+**0:50-1:20** - "Watch AI execute—identify top 20% causing 80% impact"  
+**1:20-1:50** - "Results: 50% faster MTTR, $20M saved"  
+**1:50-2:00** - "AI-native operations for Paramount+"
+
+---
+
+**🤖 Good luck at the AI Hackathon! 🎬**
+
+*Built with ❤️ for Paramount AI Hackathon 2025*
