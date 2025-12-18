@@ -141,27 +141,38 @@ class AtlassianClient:
         status: Optional[str],
         max_results: int
     ) -> list[JiraIssue]:
-        """Async implementation of issue search."""
+        """Async implementation of issue search using new JIRA API."""
         client = await self._ensure_client()
         
-        # Build JQL if not provided
-        if not jql:
-            jql_parts = []
-            if project:
-                jql_parts.append(f'project = "{project}"')
-            if status:
-                jql_parts.append(f'status = "{status}"')
-            jql = " AND ".join(jql_parts) if jql_parts else "ORDER BY created DESC"
+        # Build JQL - MUST have project restriction for new API
+        jql_parts = []
+        if project:
+            jql_parts.append(f'project = "{project}"')
+        else:
+            # Default to our projects
+            jql_parts.append('project in (PROD, STREAM, CONTENT)')
+        if status:
+            jql_parts.append(f'status = "{status}"')
+        
+        if jql:
+            jql_parts.append(f"({jql})")
+        
+        jql_parts.append("ORDER BY created DESC")
+        final_jql = " AND ".join(jql_parts[:-1]) + " " + jql_parts[-1]
         
         try:
-            response = await client.get(
-                f"{self.jira_url}/rest/api/3/search",
-                params={
-                    "jql": jql,
+            # Use new search/jql API (old /search is deprecated)
+            response = await client.post(
+                f"{self.jira_url}/rest/api/3/search/jql",
+                json={
+                    "jql": final_jql,
                     "maxResults": max_results,
-                    "fields": "summary,status,priority,issuetype,project,assignee,reporter,created,updated,description,labels,components"
+                    "fields": ["summary", "status", "priority", "issuetype", "project", 
+                              "assignee", "reporter", "created", "updated", "description", 
+                              "labels", "components"]
                 },
-                auth=self._get_jira_auth()
+                auth=self._get_jira_auth(),
+                headers={"Content-Type": "application/json"}
             )
             response.raise_for_status()
             data = response.json()
