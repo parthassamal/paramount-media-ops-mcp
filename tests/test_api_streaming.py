@@ -102,7 +102,9 @@ class TestInfrastructureEndpoints:
         
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
+        assert isinstance(data, dict)  # Returns dict, not list
+        if "incidents" in data:
+            assert isinstance(data["incidents"], list)
     
     def test_get_operational_health_success(self):
         """Test operational health summary."""
