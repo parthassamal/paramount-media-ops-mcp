@@ -1,0 +1,21 @@
+[run]
+source = mcp
+omit =
+    */tests/*
+    */test_*
+    */__pycache__/*
+    */venv/*
+    */migrations/*
+    */mocks/*
+
+[report]
+precision = 2
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+
