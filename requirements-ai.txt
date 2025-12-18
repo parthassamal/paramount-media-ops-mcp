@@ -1,0 +1,19 @@
+# AI/ML Dependencies for Paramount+ Media Operations MCP Server
+
+# LLM APIs
+anthropic==0.40.0           # Claude API for natural language processing
+openai==1.50.0              # GPT-4 API (alternative LLM provider)
+
+# Machine Learning
+scikit-learn==1.6.0         # ML utilities and algorithms
+numpy==2.2.0                # Numerical computing
+scipy==1.14.0               # Statistical analysis
+
+# Optional: Advanced ML (uncomment if needed)
+# sentence-transformers==3.3.0  # Semantic search and embeddings
+# faiss-cpu==1.9.0              # Vector similarity search
+# lightgbm==4.5.0               # Gradient boosting for churn prediction
+# prophet==1.1.6                # Time-series forecasting
+
+# Note: Install with: pip install -r requirements-ai.txt
+
