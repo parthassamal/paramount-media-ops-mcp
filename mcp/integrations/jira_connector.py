@@ -634,9 +634,17 @@ class JiraConnector:
         if self.mock_mode:
             return {
                 "issue_id": f"PROD-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                "summary": summary,
+                "title": summary,  # Use "title" to match get_production_issues format
+                "summary": summary,  # Also include summary for compatibility
+                "description": description,
                 "status": "Open",
-                "created": datetime.now().isoformat()
+                "severity": priority,
+                "show": show_name,
+                "cost_overrun": cost_impact or 0,
+                "delay_days": delay_days or 0,
+                "created": datetime.now().isoformat(),
+                "updated": datetime.now().isoformat(),
+                "assignee": None
             }
 
         fields = {

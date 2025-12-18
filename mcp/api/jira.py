@@ -165,6 +165,47 @@ async def get_production_issues(
 
 
 @router.get(
+    "/issues/critical",
+    response_model=List[JiraIssue],
+    summary="Get Critical Issues",
+    description="""
+    Retrieve all critical severity issues requiring immediate attention.
+    
+    **Use Case:** Executive dashboard, incident response, escalation workflows.
+    
+    **Response:** List of critical issues sorted by cost impact (highest first).
+    """
+)
+async def get_critical_issues() -> List[JiraIssue]:
+    """Get all critical severity issues."""
+    try:
+        result = jira.get_critical_issues()
+        # get_critical_issues returns a dict with "issues" key
+        issues = result.get("issues", []) if isinstance(result, dict) else result
+        
+        mapped_issues = []
+        for issue in issues:
+            mapped_issues.append(JiraIssue(
+                id=issue.get("issue_id", ""),
+                key=issue.get("issue_id", ""),
+                summary=issue.get("title", ""),
+                status=issue.get("status", ""),
+                severity=issue.get("severity", ""),
+                show_name=issue.get("show", ""),
+                cost_impact=issue.get("cost_overrun", 0),
+                delay_days=issue.get("delay_days", 0),
+                created=issue.get("created", datetime.now().isoformat()),
+                updated=issue.get("updated", datetime.now().isoformat()),
+                assignee=issue.get("assignee", None),
+                url=f"{settings.jira_api_url}/browse/{issue.get('issue_id', '')}"
+            ))
+        return mapped_issues
+    except Exception as e:
+        logger.error("jira_critical_issues_failed", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to fetch critical issues: {str(e)}")
+
+
+@router.get(
     "/issues/{issue_key}",
     response_model=JiraIssue,
     summary="Get Issue by Key",
@@ -235,11 +276,10 @@ async def create_issue(request: CreateIssueRequest = Body(...)) -> JiraIssue:
         logger.info("jira_create_issue", project=request.project_key, summary=request.summary)
         
         issue = jira.create_issue(
-            project_key=request.project_key,
             summary=request.summary,
             description=request.description,
             issue_type=request.issue_type,
-            severity=request.severity,
+            priority=request.severity or "High",  # Map severity to priority
             show_name=request.show_name,
             cost_impact=request.cost_impact,
             delay_days=request.delay_days
@@ -305,44 +345,6 @@ async def get_issues_by_show(show_name: str) -> List[JiraIssue]:
     except Exception as e:
         logger.error("jira_show_issues_failed", show_name=show_name, error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to fetch show issues: {str(e)}")
-
-
-@router.get(
-    "/issues/critical",
-    response_model=List[JiraIssue],
-    summary="Get Critical Issues",
-    description="""
-    Retrieve all critical severity issues requiring immediate attention.
-    
-    **Use Case:** Executive dashboard, incident response, escalation workflows.
-    
-    **Response:** List of critical issues sorted by cost impact (highest first).
-    """
-)
-async def get_critical_issues() -> List[JiraIssue]:
-    """Get all critical severity issues."""
-    try:
-        issues = jira.get_critical_issues()
-        mapped_issues = []
-        for issue in issues:
-            mapped_issues.append(JiraIssue(
-                id=issue.get("issue_id", ""),
-                key=issue.get("issue_id", ""),
-                summary=issue.get("title", ""),
-                status=issue.get("status", ""),
-                severity=issue.get("severity", ""),
-                show_name=issue.get("show", ""),
-                cost_impact=issue.get("cost_overrun", 0),
-                delay_days=issue.get("delay_days", 0),
-                created=issue.get("created", datetime.now().isoformat()),
-                updated=issue.get("updated", datetime.now().isoformat()),
-                assignee=issue.get("assignee", None),
-                url=f"{settings.jira_api_url}/browse/{issue.get('issue_id', '')}"
-            ))
-        return mapped_issues
-    except Exception as e:
-        logger.error("jira_critical_issues_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to fetch critical issues: {str(e)}")
 
 
 @router.get(
@@ -447,7 +449,7 @@ async def jira_health_check():
         "status": "healthy" if settings.jira_enabled else "disabled",
         "mock_mode": settings.mock_mode,
         "jira_force_live": settings.jira_force_live,
-        "cloud_url": settings.jira_cloud_url if settings.jira_enabled else None,
+        "cloud_url": settings.jira_api_url if settings.jira_enabled else None,
         "timestamp": datetime.now().isoformat()
     }
 

@@ -208,10 +208,12 @@ async def get_service_health(
     **Use Case:** Incident management, on-call workflows, escalation.
     """
 )
-async def get_incidents() -> List[Dict[str, Any]]:
+async def get_incidents() -> Dict[str, Any]:
     """Get active infrastructure incidents."""
     try:
-        return newrelic.get_incidents()
+        result = newrelic.get_incidents()
+        # get_incidents returns a dict, not a list
+        return result
     except Exception as e:
         logger.error("incidents_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to fetch incidents: {str(e)}")

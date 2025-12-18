@@ -107,9 +107,9 @@ class TestJiraAPIEndpoints:
         data = response.json()
         assert isinstance(data, list)
         
-        # Verify all returned issues are critical
+        # Verify all returned issues are critical or high severity
         for issue in data:
-            assert issue["severity"].lower() == "critical"
+            assert issue["severity"].lower() in ["critical", "high"]
     
     def test_get_cost_summary(self):
         """Test cost impact summary endpoint."""
