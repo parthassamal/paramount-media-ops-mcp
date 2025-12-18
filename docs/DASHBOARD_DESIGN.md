@@ -4,16 +4,16 @@
 
 ### Live Prototype
 
-<a href="https://www.figma.com/proto/YOUR_FIGMA_FILE_ID/Paramount-Media-Ops-Dashboard" target="_blank">
-  <img src="https://img.shields.io/badge/Figma-View%20Prototype-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="View Figma Prototype"/>
+<a href="https://www.figma.com/make/plRON3L0H4q0tfb4bnEhM5/Paramount--Operations-Dashboard?t=K0eEpL0F3TmVTWyj-1" target="_blank">
+  <img src="https://img.shields.io/badge/Figma-View%20Dashboard-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="View Figma Dashboard"/>
 </a>
 
-> **Note:** Replace `YOUR_FIGMA_FILE_ID` with your actual Figma file ID after creating the design.
+**File ID:** `plRON3L0H4q0tfb4bnEhM5`
 
 ### Design File
 
-- **Figma File**: [Paramount Media Ops Dashboard](https://www.figma.com/file/YOUR_FIGMA_FILE_ID/Paramount-Media-Ops-Dashboard)
-- **Design System**: [Component Library](https://www.figma.com/file/YOUR_FIGMA_FILE_ID/Paramount-Media-Ops-Dashboard?node-id=components)
+- **Figma Make File**: [Paramount+ Operations Dashboard](https://www.figma.com/make/plRON3L0H4q0tfb4bnEhM5/Paramount--Operations-Dashboard?t=K0eEpL0F3TmVTWyj-1)
+- **Exported React Code**: `dashboard/` directory (running at http://localhost:5173)
 
 ---
 
@@ -28,9 +28,9 @@ With Figma Enterprise, you can programmatically access design tokens and sync wi
 
 ```bash
 # .env file
+FIGMA_ENABLED=true
 FIGMA_ACCESS_TOKEN=your-personal-access-token
-FIGMA_TEAM_ID=your-team-id
-FIGMA_FILE_ID=your-dashboard-file-id
+FIGMA_FILE_ID=plRON3L0H4q0tfb4bnEhM5
 ```
 
 ### Using the Figma Client
