@@ -35,6 +35,7 @@ from mcp.tools import (
     create_forecast_revenue,
     create_generate_campaign
 )
+from mcp.api import jira_router, confluence_router, analytics_router, streaming_router
 
 # Configure structured logging
 structlog.configure(
@@ -117,24 +118,98 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.mcp_server_name,
     description="""
-    ## Paramount+ Media Operations MCP Server
+    ## Paramount+ Media Operations Hub
     
-    AI-driven streaming operations platform with MCP protocol support.
+    **AI-Powered Streaming Operations Platform** with comprehensive REST APIs and MCP protocol support.
     
-    ### Features
-    - **9 Data Resources**: Churn, complaints, production, content, markets, revenue, campaigns, efficiency, Pareto
-    - **5 LLM Tools**: Root cause analysis, complaint themes, production risk, revenue forecast, retention campaigns
-    - **Pareto Engine**: 80/20 rule applied across all domains
+    ### 🎯 Core Capabilities
     
-    ### Quick Start
-    - Query resources: `POST /resources/{name}/query`
-    - Execute tools: `POST /tools/{name}/execute`
-    - Health check: `GET /health`
+    #### **Production Tracking** (JIRA Integration)
+    - Real-time production issue monitoring
+    - Cost impact & delay tracking
+    - Pareto analysis of production risks
+    
+    #### **Knowledge Base** (Confluence Integration)
+    - Automated documentation
+    - Runbooks & best practices
+    - Collaborative workspace
+    
+    #### **Subscriber Intelligence** (Analytics)
+    - Churn prediction & cohort analysis
+    - Lifetime Value (LTV) calculations
+    - Retention campaign optimization
+    
+    #### **Streaming QoE** (Conviva)
+    - Buffering & video quality metrics
+    - CDN performance analysis
+    - Viewer experience optimization
+    
+    #### **Infrastructure Health** (NewRelic APM)
+    - Service health monitoring
+    - Error tracking & incidents
+    - Performance metrics
+    
+    ### 🚀 API Endpoints
+    
+    | Category | Endpoint | Description |
+    |----------|----------|-------------|
+    | **JIRA** | `/api/jira/issues` | Production issues & tracking |
+    | **Confluence** | `/api/confluence/pages` | Knowledge base & docs |
+    | **Analytics** | `/api/analytics/churn/cohorts` | Churn analysis |
+    | **Streaming** | `/api/streaming/qoe/metrics` | QoE metrics |
+    | **MCP Resources** | `/resources/{name}/query` | Data resources |
+    | **MCP Tools** | `/tools/{name}/execute` | AI tools |
+    
+    ### 📊 Business Impact
+    - **$2.1M** annual revenue saved through churn reduction
+    - **80/20 Rule** applied across all operational domains
+    - **Real-time** production issue tracking
+    - **AI-driven** recommendations for retention
+    
+    ### 🔗 Quick Links
+    - [Interactive Swagger Docs](/docs) ← You are here
+    - [ReDoc Documentation](/redoc)
+    - [Health Check](/health)
+    - [GitHub Repository](https://github.com/parthassamal/paramount-media-ops-mcp)
     """,
     version=settings.mcp_server_version,
     docs_url="/docs",
     redoc_url="/redoc",
-    lifespan=lifespan
+    lifespan=lifespan,
+    openapi_tags=[
+        {
+            "name": "System",
+            "description": "System health, configuration, and status endpoints"
+        },
+        {
+            "name": "JIRA Production Tracking",
+            "description": "🎬 Production issue tracking, cost analysis, and JIRA integration"
+        },
+        {
+            "name": "Confluence Knowledge Base",
+            "description": "📚 Documentation, runbooks, and knowledge management"
+        },
+        {
+            "name": "Analytics & Churn Intelligence",
+            "description": "📊 Subscriber analytics, churn prediction, and LTV analysis"
+        },
+        {
+            "name": "Streaming QoE & Infrastructure",
+            "description": "📺 Quality of Experience metrics and infrastructure health"
+        },
+        {
+            "name": "Resources",
+            "description": "🗄️ MCP data resources with Pareto analysis"
+        },
+        {
+            "name": "Tools",
+            "description": "🤖 AI-powered LLM tools for operational intelligence"
+        },
+        {
+            "name": "MCP Protocol",
+            "description": "🔌 Model Context Protocol endpoints for LLM integration"
+        }
+    ]
 )
 
 # Add CORS middleware for browser access
@@ -145,6 +220,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API routers
+app.include_router(jira_router)
+app.include_router(confluence_router)
+app.include_router(analytics_router)
+app.include_router(streaming_router)
 
 
 # Pydantic models for request/response
@@ -243,10 +324,17 @@ async def health_check():
             "tools_available": len(TOOLS),
             "integrations": {
                 "jira": settings.jira_enabled,
+                "confluence": settings.atlassian_enabled,
                 "conviva": settings.conviva_enabled,
                 "newrelic": settings.newrelic_enabled,
                 "analytics": settings.analytics_enabled,
                 "figma": settings.figma_enabled
+            },
+            "api_endpoints": {
+                "jira": "/api/jira",
+                "confluence": "/api/confluence",
+                "analytics": "/api/analytics",
+                "streaming": "/api/streaming"
             },
             "timestamp": datetime.now().isoformat()
         }
