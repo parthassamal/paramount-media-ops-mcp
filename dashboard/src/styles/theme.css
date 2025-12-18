@@ -122,6 +122,7 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   body {

@@ -1,9 +1,12 @@
 """Adobe Cloud Services API endpoints for report generation and storage."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, Literal
 import structlog
+import os
+import json
 
 logger = structlog.get_logger(__name__)
 
@@ -35,28 +38,14 @@ async def export_operations_report(request: ExportReportRequest):
     - `churn`: Churn analysis with Pareto cohorts
     - `incidents`: Production incident summary
     - `executive`: Executive summary for leadership
-    
-    **Example:**
-    ```json
-    {
-        "report_type": "churn",
-        "data": {
-            "at_risk_count": 3200000,
-            "revenue_at_risk": 965,
-            "top_cohorts": ["International Markets", "Price-Sensitive Users"],
-            "recommendations": "Launch retention campaign",
-            "timestamp": "2025-12-18T10:30:00Z"
-        },
-        "upload_to_cloud": true
-    }
-    ```
     """
     from mcp.integrations.adobe_pdf_client import create_adobe_pdf_client
     from mcp.integrations.adobe_storage_client import create_adobe_storage_client
+    from config import settings
     
     # Get Adobe PDF client
     adobe_pdf = create_adobe_pdf_client()
-    if not adobe_pdf or not adobe_pdf.enabled:
+    if not adobe_pdf or (not adobe_pdf.enabled and not settings.mock_mode):
         raise HTTPException(
             status_code=503,
             detail="Adobe PDF Services not configured. Set ADOBE_PDF_ENABLED=true and credentials."
@@ -76,7 +65,16 @@ async def export_operations_report(request: ExportReportRequest):
                 detail=f"Unknown report type: {request.report_type}"
             )
         
-        logger.info("report_exported", type=request.report_type, path=pdf_path)
+        # Verify file was created
+        if not os.path.exists(pdf_path):
+            raise HTTPException(
+                status_code=500,
+                detail=f"PDF generation failed - file not created at {pdf_path}"
+            )
+        
+        # Log file size for debugging
+        file_size = os.path.getsize(pdf_path)
+        logger.info("report_exported", type=request.report_type, path=pdf_path, size_bytes=file_size)
         
         # Optionally upload to Adobe Cloud Storage
         cloud_file_id = None
@@ -94,6 +92,7 @@ async def export_operations_report(request: ExportReportRequest):
             "status": "success",
             "report_type": request.report_type,
             "pdf_path": pdf_path,
+            "filename": os.path.basename(pdf_path),
             "cloud_file_id": cloud_file_id,
             "message": f"Report exported successfully"
         }
@@ -101,6 +100,24 @@ async def export_operations_report(request: ExportReportRequest):
     except Exception as e:
         logger.error("export_failed", error=str(e), report_type=request.report_type)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/download-report/{filename}")
+async def download_report(filename: str):
+    """Download a generated PDF report."""
+    # Security check: only allow downloading .pdf files from current dir
+    if not filename.endswith(".pdf") or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    file_path = filename
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    return FileResponse(
+        path=file_path,
+        media_type='application/pdf',
+        filename=filename
+    )
 
 
 @router.post("/upload-dashboard-export")
@@ -246,6 +263,7 @@ async def adobe_health_check():
     """
     from mcp.integrations.adobe_pdf_client import create_adobe_pdf_client
     from mcp.integrations.adobe_storage_client import create_adobe_storage_client
+    from config import settings
     
     pdf_client = create_adobe_pdf_client()
     storage_client = create_adobe_storage_client()
@@ -255,11 +273,11 @@ async def adobe_health_check():
         "services": {
             "pdf_services": {
                 "enabled": pdf_client.enabled if pdf_client else False,
-                "status": "operational" if (pdf_client and pdf_client.enabled) else "disabled"
+                "status": "operational" if (pdf_client and pdf_client.enabled) else ("mock_operational" if settings.mock_mode else "disabled")
             },
             "cloud_storage": {
                 "enabled": storage_client.enabled if storage_client else False,
-                "status": "operational" if (storage_client and storage_client.enabled) else "disabled"
+                "status": "operational" if (storage_client and storage_client.enabled) else ("mock_operational" if settings.mock_mode else "disabled")
             }
         },
         "message": "Adobe services health check complete"

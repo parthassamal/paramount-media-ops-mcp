@@ -1,0 +1,322 @@
+/* Custom Swagger UI Styling for Paramount+ AI Operations Platform */
+
+/* Color Scheme - Paramount+ Branding */
+:root {
+    --paramount-blue: #0064FF;
+    --paramount-dark: #0A0E1A;
+    --paramount-gray: #1E293B;
+    --paramount-light: #E2E8F0;
+}
+
+/* Top Bar Styling */
+.swagger-ui .topbar {
+    background: linear-gradient(135deg, #0064FF 0%, #0052CC 100%) !important;
+    border-bottom: 3px solid #0064FF;
+    padding: 15px 0;
+}
+
+.swagger-ui .topbar .link {
+    color: white !important;
+}
+
+/* Info Section - Clean Header */
+.swagger-ui .info {
+    margin: 30px 0;
+}
+
+.swagger-ui .info .title {
+    color: #0064FF !important;
+    font-size: 36px !important;
+    font-weight: 700 !important;
+    margin-bottom: 10px;
+}
+
+.swagger-ui .info .description {
+    color: #475569;
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+/* Section Headers (Operations Tags) */
+.swagger-ui .opblock-tag {
+    border-bottom: 2px solid #E2E8F0;
+    padding: 15px 0;
+    margin: 20px 0;
+}
+
+.swagger-ui .opblock-tag-section {
+    margin-bottom: 20px;
+}
+
+.swagger-ui .opblock-tag span {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    color: #1E293B !important;
+}
+
+/* Operation Blocks - Cleaner Look */
+.swagger-ui .opblock {
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s;
+}
+
+.swagger-ui .opblock:hover {
+    box-shadow: 0 4px 6px rgba(0, 100, 255, 0.1);
+    border-color: #0064FF;
+}
+
+/* HTTP Method Colors - More Subtle */
+.swagger-ui .opblock.opblock-get {
+    border-left: 4px solid #61AFFE;
+    background: rgba(97, 175, 254, 0.03);
+}
+
+.swagger-ui .opblock.opblock-post {
+    border-left: 4px solid #49CC90;
+    background: rgba(73, 204, 144, 0.03);
+}
+
+.swagger-ui .opblock.opblock-put {
+    border-left: 4px solid #FCA130;
+    background: rgba(252, 161, 48, 0.03);
+}
+
+.swagger-ui .opblock.opblock-delete {
+    border-left: 4px solid #F93E3E;
+    background: rgba(249, 62, 62, 0.03);
+}
+
+/* Operation Summary - Better Spacing */
+.swagger-ui .opblock-summary-description {
+    font-size: 14px;
+    color: #64748B;
+    margin-left: 10px;
+}
+
+/* Try it Out Button - Paramount Blue */
+.swagger-ui .btn.try-out__btn {
+    background: #0064FF;
+    color: white;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-weight: 600;
+    border: none;
+    transition: all 0.2s;
+}
+
+.swagger-ui .btn.try-out__btn:hover {
+    background: #0052CC;
+    box-shadow: 0 4px 6px rgba(0, 100, 255, 0.2);
+}
+
+/* Execute Button - Success Green */
+.swagger-ui .btn.execute {
+    background: #10B981;
+    color: white;
+    border-radius: 6px;
+    padding: 10px 30px;
+    font-weight: 600;
+    border: none;
+    transition: all 0.2s;
+}
+
+.swagger-ui .btn.execute:hover {
+    background: #059669;
+    box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);
+}
+
+/* Response Section - Better Contrast */
+.swagger-ui .responses-wrapper {
+    margin-top: 20px;
+}
+
+.swagger-ui .response {
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 15px;
+    background: #F8FAFC;
+}
+
+/* Code Blocks - Dark Theme */
+.swagger-ui .highlight-code {
+    background: #1E293B !important;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.swagger-ui .highlight-code pre {
+    color: #E2E8F0;
+}
+
+/* Parameters Table - Cleaner */
+.swagger-ui table {
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.swagger-ui table thead tr {
+    background: #F1F5F9;
+    border-bottom: 2px solid #E2E8F0;
+}
+
+.swagger-ui table tbody tr {
+    border-bottom: 1px solid #F1F5F9;
+}
+
+.swagger-ui table tbody tr:hover {
+    background: #F8FAFC;
+}
+
+/* Input Fields - Modern Look */
+.swagger-ui input[type=text],
+.swagger-ui textarea,
+.swagger-ui select {
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.swagger-ui input[type=text]:focus,
+.swagger-ui textarea:focus {
+    border-color: #0064FF;
+    box-shadow: 0 0 0 3px rgba(0, 100, 255, 0.1);
+    outline: none;
+}
+
+/* Schema Section - Better Readability */
+.swagger-ui .model-box {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+/* Authorization - Paramount Styling */
+.swagger-ui .btn.authorize {
+    background: #0064FF;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-weight: 600;
+}
+
+.swagger-ui .btn.authorize:hover {
+    background: #0052CC;
+}
+
+/* Remove Clutter */
+.swagger-ui .scheme-container {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+/* Markdown Styling in Descriptions */
+.swagger-ui .markdown p {
+    line-height: 1.6;
+    margin-bottom: 10px;
+    color: #475569;
+}
+
+.swagger-ui .markdown h1,
+.swagger-ui .markdown h2,
+.swagger-ui .markdown h3 {
+    color: #1E293B;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.swagger-ui .markdown code {
+    background: #F1F5F9;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+    color: #0064FF;
+}
+
+/* Better Scrollbars */
+.swagger-ui ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.swagger-ui ::-webkit-scrollbar-track {
+    background: #F1F5F9;
+}
+
+.swagger-ui ::-webkit-scrollbar-thumb {
+    background: #CBD5E1;
+    border-radius: 4px;
+}
+
+.swagger-ui ::-webkit-scrollbar-thumb:hover {
+    background: #94A3B8;
+}
+
+/* Loading Animation */
+.swagger-ui .loading-container {
+    padding: 40px;
+    text-align: center;
+}
+
+/* Filter Box */
+.swagger-ui .filter {
+    margin-bottom: 20px;
+}
+
+.swagger-ui .filter .operation-filter-input {
+    border: 2px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 15px;
+    width: 100%;
+    transition: all 0.2s;
+}
+
+.swagger-ui .filter .operation-filter-input:focus {
+    border-color: #0064FF;
+    box-shadow: 0 0 0 3px rgba(0, 100, 255, 0.1);
+    outline: none;
+}
+
+/* Collapse/Expand Icons */
+.swagger-ui svg {
+    fill: #64748B;
+    transition: all 0.2s;
+}
+
+.swagger-ui .opblock-tag:hover svg {
+    fill: #0064FF;
+}
+
+/* Success/Error Messages */
+.swagger-ui .response.success {
+    background: #F0FDF4;
+    border-color: #86EFAC;
+}
+
+.swagger-ui .response.error {
+    background: #FEF2F2;
+    border-color: #FCA5A5;
+}
+
+/* Responsive Improvements */
+@media (max-width: 768px) {
+    .swagger-ui .info .title {
+        font-size: 28px !important;
+    }
+    
+    .swagger-ui .opblock-tag span {
+        font-size: 18px !important;
+    }
+}
+

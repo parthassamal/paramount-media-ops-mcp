@@ -237,6 +237,32 @@ class FigmaClient:
         return self._make_request_sync(f"files/{file_id}/styles")
     
     # =========================================================================
+    # Image Operations
+    # =========================================================================
+    
+    def get_images(self, file_id: str, ids: str, format: str = "png", scale: float = 1.0) -> Dict[str, str]:
+        """
+        Get URLs for images exported from Figma nodes.
+        
+        Args:
+            file_id: Figma file ID
+            ids: Comma-separated list of node IDs to export
+            format: "png", "jpg", "svg", or "pdf"
+            scale: Image scale (1 to 4)
+            
+        Returns:
+            Dictionary mapping node IDs to image URLs
+        """
+        if self.mock_mode:
+            return {id: "https://figma.com/sample-image.png" for id in ids.split(",")}
+            
+        response = self._make_request_sync(
+            f"images/{file_id}",
+            params={"ids": ids, "format": format, "scale": scale}
+        )
+        return response.get("images", {})
+
+    # =========================================================================
     # Design Tokens
     # =========================================================================
     

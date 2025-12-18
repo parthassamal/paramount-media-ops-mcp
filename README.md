@@ -8,7 +8,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![MCP](https://img.shields.io/badge/MCP-1.23+-7C3AED?style=flat-square)](https://modelcontextprotocol.io/)
 [![Tests](https://img.shields.io/badge/Tests-82%20Passing-34D399?style=flat-square)](./tests/)
-[![Figma](https://img.shields.io/badge/Figma-Dashboard-F24E1E?style=flat-square&logo=figma&logoColor=white)](./docs/DASHBOARD_DESIGN.md)
+[![Figma](https://img.shields.io/badge/Figma-Dashboard-F24E1E?style=flat-square&logo=figma&logoColor=white)](https://www.figma.com/design/plRON3L0H4q0tfb4bnEhM5/)
 [![Dashboard](https://img.shields.io/badge/React-Dashboard-61DAFB?style=flat-square&logo=react&logoColor=black)](./dashboard/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](./LICENSE)
 
@@ -43,8 +43,6 @@ cd paramount-media-ops-mcp
 **That's it!** Backend + Frontend running with one command.
 
 **Check status:** `./status.sh` | **Stop:** `./stop.sh`
-
-📖 **Need help?** See [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) for all guides.
 
 ---
 
@@ -113,7 +111,7 @@ generator = AIInsightsGenerator()
 summary = generator.generate_executive_summary(operational_data)
 ```
 
-**📚 Full Guide:** [AI Features Documentation](./docs/AI_FEATURES.md)
+**📚 See code:** `mcp/ai/` for anomaly detection, predictive analytics, and insights generation.
 
 **🎯 Business Impact:**
 - 50% reduction in MTTR (2.4h → 1.2h)
@@ -207,7 +205,7 @@ paramount-media-ops-mcp/
 │   ├── integrations/                 # External Service Connectors
 │   │   ├── jira_connector.py         # JIRA API for production issues
 │   │   ├── atlassian_client.py       # Atlassian wrapper (Jira + Confluence)
-│   │   ├── conviva_client.py         # Conviva Streaming QoE metrics
+│   │   ├── dynatrace_client.py       # Dynatrace Full-Stack Monitoring
 │   │   ├── newrelic_client.py        # NewRelic APM & Infrastructure
 │   │   ├── email_parser.py           # NLP complaint analysis
 │   │   ├── analytics_client.py       # Churn & subscriber analytics
@@ -376,9 +374,7 @@ python scripts/setup_integrations.py
 python scripts/test_integrations.py --all
 ```
 
-**📚 Guides:**
-- [Complete Integration Setup](./INTEGRATION_SETUP.md) - Full guide
-- [API Keys Quick Reference](./API_KEYS_QUICKREF.md) - Where to get keys
+**📚 Setup:** Run `python scripts/setup_integrations.py` for interactive configuration.
 
 ### JIRA Production Issues
 Real-time tracking of production delays, cost overruns, and blockers.
@@ -614,7 +610,7 @@ The operations dashboard provides real-time visibility into streaming operations
 |----------|------|
 | **Figma Make Dashboard** | [View Design](https://www.figma.com/make/plRON3L0H4q0tfb4bnEhM5/Paramount--Operations-Dashboard?t=K0eEpL0F3TmVTWyj-1) |
 | **Live React Dashboard** | http://localhost:5173 (after `npm run dev`) |
-| **Dashboard Specs** | [docs/DASHBOARD_DESIGN.md](./docs/DASHBOARD_DESIGN.md) |
+| **Dashboard Specs** | See `dashboard/` folder |
 
 ### Figma Dashboard Link
 
@@ -715,10 +711,9 @@ CONFLUENCE_USERNAME=your-email@example.com
 CONFLUENCE_API_TOKEN=your-token
 CONFLUENCE_SPACE_KEY=OPS
 
-# Conviva
-CONVIVA_API_URL=https://api.conviva.com/insights/2.4
-CONVIVA_CUSTOMER_KEY=your-key
-CONVIVA_API_KEY=your-token
+# Dynatrace
+DYNATRACE_ENVIRONMENT_URL=https://xxx.live.dynatrace.com
+DYNATRACE_API_TOKEN=your-token
 
 # NewRelic
 NEWRELIC_API_URL=https://api.newrelic.com/graphql

@@ -302,6 +302,10 @@ class Settings(BaseSettings):
         default="",
         description="Figma file ID for the operations dashboard design"
     )
+    figma_hero_node_id: str = Field(
+        default="",
+        description="Figma node ID for the hero background image (e.g., 123:456)"
+    )
     figma_request_timeout: int = Field(
         default=30,
         description="Request timeout in seconds"
