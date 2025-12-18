@@ -456,8 +456,8 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 
 <div align="center">
 
-<a href="https://www.figma.com/proto/YOUR_FIGMA_FILE_ID/Paramount-Media-Ops-Dashboard">
-  <img src="https://img.shields.io/badge/Figma-View%20Prototype-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="View Figma Prototype"/>
+<a href="https://www.figma.com/make/plRON3L0H4q0tfb4bnEhM5/Paramount--Operations-Dashboard?t=K0eEpL0F3TmVTWyj-1">
+  <img src="https://img.shields.io/badge/Figma-View%20Dashboard-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="View Figma Dashboard"/>
 </a>
 
 </div>
@@ -491,22 +491,15 @@ The operations dashboard provides real-time visibility into streaming operations
 
 | Resource | Link |
 |----------|------|
-| **Figma Prototype** | [Interactive Demo](https://www.figma.com/proto/YOUR_FIGMA_FILE_ID) |
-| **Design System** | [Components & Styles](https://www.figma.com/file/YOUR_FIGMA_FILE_ID?node-id=design-system) |
+| **Figma Make Dashboard** | [View Design](https://www.figma.com/make/plRON3L0H4q0tfb4bnEhM5/Paramount--Operations-Dashboard?t=K0eEpL0F3TmVTWyj-1) |
+| **Live React Dashboard** | http://localhost:5173 (after `npm run dev`) |
 | **Dashboard Specs** | [docs/DASHBOARD_DESIGN.md](./docs/DASHBOARD_DESIGN.md) |
 
-### Figma Embed (for presentations)
+### Figma Dashboard Link
 
-```html
-<iframe 
-  style="border: 1px solid rgba(0, 0, 0, 0.1);" 
-  width="800" height="450" 
-  src="https://www.figma.com/embed?embed_host=share&url=https://www.figma.com/proto/YOUR_FIGMA_FILE_ID" 
-  allowfullscreen>
-</iframe>
-```
+**Live Design:** [Paramount+ Operations Dashboard](https://www.figma.com/make/plRON3L0H4q0tfb4bnEhM5/Paramount--Operations-Dashboard?t=K0eEpL0F3TmVTWyj-1)
 
-> **Note:** Replace `YOUR_FIGMA_FILE_ID` with your actual Figma file ID.
+> Generated with Figma Make — exported to React code in `dashboard/` directory.
 
 ---
 
