@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     # Production issue tracking and workflow management
     # ==========================================================================
     jira_enabled: bool = True
+    # Allow Jira to run live even when global MOCK_MODE=true (hybrid hackathon demo)
+    jira_force_live: bool = Field(
+        default=False,
+        description="Force live Jira API calls even when MOCK_MODE=true (hybrid demo)."
+    )
     jira_api_url: str = Field(
         default="https://paramounthackathon.atlassian.net",
         description="JIRA instance URL"

@@ -1,34 +1,40 @@
-import React from 'react';
-import { Film, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Film, Clock, AlertCircle, CheckCircle, RefreshCcw, Wifi, WifiOff, ExternalLink } from 'lucide-react';
+import { getProductionIssues, isMCPServerRunning, type ProductionIssue } from '../../api/mcpClient';
 
-const productionItems = [
+// Fallback mock items (used if MCP server is not available)
+const productionItemsFallback = [
   {
     title: 'Yellowstone S6',
     status: 'critical',
     issue: 'Script delays - 3 weeks behind',
     impact: 'High',
-    progress: 35
+    progress: 35,
+    jiraUrl: undefined
   },
   {
     title: 'Star Trek: Discovery',
     status: 'delayed',
     issue: 'VFX rendering bottleneck',
     impact: 'Medium',
-    progress: 67
+    progress: 67,
+    jiraUrl: undefined
   },
   {
     title: '1923 Season 2',
     status: 'warning',
     issue: 'Location permit issues',
     impact: 'Medium',
-    progress: 82
+    progress: 82,
+    jiraUrl: undefined
   },
   {
     title: 'The Offer (New Series)',
     status: 'on-track',
     issue: 'No issues',
     impact: 'Low',
-    progress: 92
+    progress: 92,
+    jiraUrl: undefined
   }
 ];
 
@@ -64,6 +70,72 @@ const statusConfig = {
 };
 
 export function ProductionTracking() {
+  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [items, setItems] = useState(productionItemsFallback);
+
+  useEffect(() => {
+    checkConnection();
+  }, []);
+
+  async function checkConnection() {
+    const running = await isMCPServerRunning();
+    setIsConnected(running);
+    if (running) {
+      fetchLive();
+    }
+  }
+
+  function mapIssue(issue: ProductionIssue) {
+    const severity = (issue.severity || '').toLowerCase();
+    const status =
+      severity === 'critical' ? 'critical' :
+      severity === 'high' ? 'delayed' :
+      severity === 'medium' ? 'warning' :
+      'on-track';
+
+    const delayDays = issue.delay_days ?? 0;
+    const progress = Math.max(10, Math.min(95, 95 - delayDays * 8)); // quick heuristic for demo
+
+    const title = issue.show && issue.show.trim().length > 0 ? issue.show : issue.issue_id;
+    const impact = severity === 'critical' ? 'High' : severity === 'high' ? 'Medium' : 'Low';
+
+    return {
+      title,
+      status,
+      issue: issue.title,
+      impact,
+      progress,
+      jiraUrl: issue.jira_url
+    };
+  }
+
+  async function fetchLive() {
+    setIsLoading(true);
+    try {
+      const res = await getProductionIssues({ limit: 8, include_pareto: false });
+      if (res?.issues?.length) {
+        const mapped = res.issues.slice(0, 8).map(mapIssue);
+        setItems(mapped);
+        setIsConnected(true);
+        setLastUpdated(new Date());
+      }
+    } catch (e) {
+      console.error('Failed to fetch production issues:', e);
+      setIsConnected(false);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const stats = useMemo(() => {
+    const critical = items.filter(i => i.status === 'critical').length;
+    const delayed = items.filter(i => i.status === 'delayed' || i.status === 'warning').length;
+    const onTrack = items.filter(i => i.status === 'on-track').length;
+    return { critical, delayed, onTrack };
+  }, [items]);
+
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
@@ -77,14 +149,33 @@ export function ProductionTracking() {
           </div>
         </div>
         <div className="flex gap-2">
+          {isConnected ? (
+            <div className="flex items-center gap-1 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full text-xs text-green-400">
+              <Wifi className="w-3 h-3" />
+              Live
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 px-3 py-1 bg-slate-800/60 border border-slate-700 rounded-full text-xs text-slate-400">
+              <WifiOff className="w-3 h-3" />
+              Mock
+            </div>
+          )}
+          <button
+            onClick={fetchLive}
+            disabled={isLoading}
+            className="p-1.5 rounded-md bg-slate-800 hover:bg-slate-700 transition-colors disabled:opacity-50"
+            title="Refresh"
+          >
+            <RefreshCcw className={`w-4 h-4 text-slate-400 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
           <div className="px-3 py-1 bg-red-500/10 border border-red-500/30 rounded-full text-xs text-red-400">
-            2 Critical
+            {stats.critical} Critical
           </div>
         </div>
       </div>
 
       <div className="space-y-4">
-        {productionItems.map((item, index) => {
+        {items.map((item, index) => {
           const config = statusConfig[item.status];
           const Icon = config.icon;
 
@@ -127,9 +218,23 @@ export function ProductionTracking() {
 
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-500">Impact: {item.impact}</span>
-                {item.status === 'critical' && (
-                  <span className="text-red-400 font-medium">Action Required</span>
-                )}
+                <div className="flex items-center gap-3">
+                  {item.jiraUrl && (
+                    <a
+                      href={item.jiraUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-slate-400 hover:text-slate-200 inline-flex items-center gap-1"
+                      title="Open in Jira"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Jira
+                    </a>
+                  )}
+                  {item.status === 'critical' && (
+                    <span className="text-red-400 font-medium">Action Required</span>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -139,19 +244,25 @@ export function ProductionTracking() {
       <div className="mt-4 pt-4 border-t border-slate-800">
         <div className="grid grid-cols-3 gap-3 text-center">
           <div>
-            <div className="text-2xl font-bold text-red-400">2</div>
+            <div className="text-2xl font-bold text-red-400">{stats.critical}</div>
             <div className="text-xs text-slate-500">Critical Issues</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-amber-400">2</div>
+            <div className="text-2xl font-bold text-amber-400">{stats.delayed}</div>
             <div className="text-xs text-slate-500">Delayed</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-green-400">1</div>
+            <div className="text-2xl font-bold text-green-400">{stats.onTrack}</div>
             <div className="text-xs text-slate-500">On Track</div>
           </div>
         </div>
       </div>
+
+      {lastUpdated && (
+        <div className="mt-3 text-xs text-slate-500 text-right">
+          Last updated: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
     </div>
   );
 }

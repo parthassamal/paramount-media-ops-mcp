@@ -14,7 +14,10 @@ class ProductionIssuesResource:
     
     def __init__(self):
         """Initialize production issues resource."""
-        self.jira = JiraConnector()
+        # Hybrid hackathon mode:
+        # - Keep global MOCK_MODE for analytics/churn resources
+        # - Allow Jira to be live when configured (see Settings.jira_force_live)
+        self.jira = JiraConnector(mock_mode=None)
         self.pareto = ParetoCalculator()
         self.insights = ParetoInsights()
     

@@ -28,7 +28,9 @@
 
 ## 🎯 Executive Summary
 
-**Paramount+ Media Operations MCP Server** is an AI-powered operational intelligence platform that unifies **JIRA production tracking**, **Conviva streaming QoE**, **NewRelic APM**, **email complaint analysis**, **churn analytics**, and **content ROI** through the Model Context Protocol (MCP).
+**Paramount+ Media Operations MCP Server** is an AI-powered operational intelligence platform that unifies **Jira production tracking**, **Confluence runbooks**, **Conviva-style streaming QoE**, **NewRelic-style APM**, **email complaint analysis**, **churn analytics**, and **content ROI** through the Model Context Protocol (MCP).
+
+**Hackathon reality (E2E strategy):** run a **hybrid demo** where **churn + analytics remain mocked** (to preserve the core Pareto churn tactics), while **Atlassian (Jira + Confluence) is live** via a free Atlassian Cloud instance. This gives you real operational artifacts (tickets + runbooks) without depending on paid telemetry vendors.
 
 ### 💰 Addressable Opportunity: **$750M/year**
 
@@ -63,6 +65,20 @@ pip install -r requirements.txt
 ```bash
 # Validate installation and see Pareto analysis in action
 python demo_usage.py
+```
+
+### 2a. Hybrid Mode (Recommended for Hackathon)
+
+- Keep **MOCK_MODE=true** (so churn/analytics remains stable and demo-safe)
+- Enable **live Jira** with **JIRA_FORCE_LIVE=true**
+
+```bash
+# Copy example env and set your Atlassian credentials (Jira + Confluence)
+cp .env.example .env
+
+# Recommended for hackathon demo
+MOCK_MODE=true
+JIRA_FORCE_LIVE=true
 ```
 
 ### 3. Start the MCP Server
@@ -107,6 +123,7 @@ paramount-media-ops-mcp/
 │   │
 │   ├── integrations/                 # External Service Connectors
 │   │   ├── jira_connector.py         # JIRA API for production issues
+│   │   ├── atlassian_client.py       # Atlassian wrapper (Jira + Confluence)
 │   │   ├── conviva_client.py         # Conviva Streaming QoE metrics
 │   │   ├── newrelic_client.py        # NewRelic APM & Infrastructure
 │   │   ├── email_parser.py           # NLP complaint analysis
@@ -256,10 +273,23 @@ Real-time tracking of production delays, cost overruns, and blockers.
 
 ```python
 # Configuration in .env
-JIRA_API_URL=https://paramount.atlassian.net
-JIRA_API_EMAIL=your-email@paramount.com
+JIRA_API_URL=https://paramounthackathon.atlassian.net
+JIRA_API_EMAIL=your-email@example.com
 JIRA_API_TOKEN=your-api-token
 JIRA_PROJECT_KEY=PROD
+
+# Hybrid demo switch
+JIRA_FORCE_LIVE=true
+```
+
+### Confluence Runbooks
+Live operational documentation and runbooks (free Atlassian Cloud).
+
+```python
+CONFLUENCE_API_URL=https://paramounthackathon.atlassian.net
+CONFLUENCE_USERNAME=your-email@example.com
+CONFLUENCE_API_TOKEN=your-api-token
+CONFLUENCE_SPACE_KEY=OPS
 ```
 
 ### Conviva Streaming QoE
@@ -354,6 +384,18 @@ print(f"Top 20% causes {result.top_20_percent_contribution:.1%} of delays")
 ```bash
 python demo_usage.py
 ```
+
+### E2E Hackathon Demo Script (5–8 minutes)
+
+- **Step 1 (30s)**: Open **React dashboard** `http://localhost:5173`
+- **Step 2 (60s)**: Show **Jira board** with live issues (PROD/STREAM/CONTENT)
+- **Step 3 (60s)**: Show **Confluence OPS space** (runbooks + Pareto framework)
+- **Step 4 (2–3m)**: Run `python demo_usage.py` and call out:
+  - churn at-risk cohorts
+  - Pareto validation (80/20)
+  - AI recommendation + campaign ROI
+- **Step 5 (60s)**: Open API docs `http://localhost:8000/docs` and show tools/resources
+- **Step 6 (30s)**: Refresh “Production Tracking” in the dashboard (Live/Mock indicator)
 
 **Demo Output:**
 ```
@@ -467,6 +509,8 @@ A fully functional React dashboard generated from Figma Make, featuring:
 - **Streaming Metrics**: Real-time QoE indicators
 - **Production Tracking**: JIRA integration status
 
+**Live ops hookup:** the Production Tracking card now queries MCP `production_issues` and shows **Live/Mock** status with a refresh button.
+
 ### Run the Dashboard
 
 ```bash
@@ -534,11 +578,18 @@ MCP_SERVER_HOST=0.0.0.0
 MCP_SERVER_PORT=8000
 MOCK_MODE=true
 
-# JIRA
-JIRA_API_URL=https://paramount.atlassian.net
-JIRA_API_EMAIL=your-email@paramount.com
+# JIRA (Atlassian Cloud free tier)
+JIRA_API_URL=https://paramounthackathon.atlassian.net
+JIRA_API_EMAIL=your-email@example.com
 JIRA_API_TOKEN=your-token
 JIRA_PROJECT_KEY=PROD
+JIRA_FORCE_LIVE=true
+
+# Confluence (Atlassian Cloud)
+CONFLUENCE_API_URL=https://paramounthackathon.atlassian.net
+CONFLUENCE_USERNAME=your-email@example.com
+CONFLUENCE_API_TOKEN=your-token
+CONFLUENCE_SPACE_KEY=OPS
 
 # Conviva
 CONVIVA_API_URL=https://api.conviva.com/insights/2.4
