@@ -40,7 +40,9 @@ class JiraConnector:
         Args:
             mock_mode: If True, use mock data. If None, use settings default.
         """
-        self.mock_mode = mock_mode if mock_mode is not None else settings.mock_mode
+        # Support "hybrid demo" mode: keep analytics mocked, but run Jira live
+        forced_live = bool(getattr(settings, "jira_force_live", False))
+        self.mock_mode = False if forced_live else (mock_mode if mock_mode is not None else settings.mock_mode)
         self.api_url = settings.jira_api_url.rstrip('/')
         self.api_email = settings.jira_api_email
         self.api_token = settings.jira_api_token
@@ -62,6 +64,31 @@ class JiraConnector:
         else:
             self._validate_credentials()
             logger.info("jira_connector_initialized", mode="live", url=self.api_url)
+
+    def _sync_request(
+        self,
+        method: str,
+        endpoint: str,
+        params: Optional[Dict] = None,
+        data: Optional[Dict] = None,
+    ) -> Dict[str, Any]:
+        """
+        Make a synchronous request to Jira.
+
+        We intentionally use sync HTTP here to keep the public API synchronous and
+        avoid event-loop issues when called inside FastAPI request handlers.
+        """
+        url = f"{self.api_url}{endpoint}"
+        with httpx.Client(timeout=self.timeout) as client:
+            response = client.request(
+                method=method,
+                url=url,
+                headers=self._get_auth_header(),
+                params=params,
+                json=data,
+            )
+            response.raise_for_status()
+            return response.json()
     
     def _validate_credentials(self):
         """Validate JIRA credentials are configured."""
@@ -334,20 +361,53 @@ class JiraConnector:
         days_since_created: Optional[int],
         limit: int
     ) -> List[Dict[str, Any]]:
-        """Fetch from real JIRA API (synchronous wrapper)."""
-        import asyncio
-        
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(
-            self._fetch_from_jira_async(
-                project, status, severity, show_name, days_since_created, limit
-            )
+        """Fetch from real JIRA API (synchronous)."""
+        jql = self._build_jql(
+            project=project,
+            status=status,
+            severity=severity,
+            show_name=show_name,
+            days_since_created=days_since_created,
         )
+
+        logger.info("jira_search", jql=jql, limit=limit)
+
+        try:
+            # Jira Cloud deprecated /rest/api/3/search in some tenants;
+            # use /rest/api/3/search/jql (POST).
+            response = self._sync_request(
+                method="POST",
+                endpoint="/rest/api/3/search/jql",
+                data={
+                    "jql": jql,
+                    "maxResults": limit,
+                    "fields": [
+                        "summary",
+                        "description",
+                        "status",
+                        "priority",
+                        "assignee",
+                        "reporter",
+                        "created",
+                        "updated",
+                        "labels",
+                        "components",
+                        self.cf_cost_impact,
+                        self.cf_delay_days,
+                        self.cf_show_name,
+                    ],
+                },
+            )
+
+            issues = [self._parse_issue(issue) for issue in response.get("issues", [])]
+            logger.info("jira_search_complete", count=len(issues))
+            return issues
+        except Exception as e:
+            logger.error("jira_fetch_failed", error=str(e))
+            if settings.is_development:
+                logger.warning("falling_back_to_mock_data")
+                return self._get_mock_issues(status, severity, show_name, days_since_created, limit)
+            raise
     
     async def _fetch_from_jira_async(
         self,
@@ -418,15 +478,13 @@ class JiraConnector:
                     return issue
             return None
         
-        # Fetch from JIRA
-        import asyncio
         try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(self._get_issue_by_id_async(issue_id))
+            response = self._sync_request(method="GET", endpoint=f"/rest/api/3/issue/{issue_id}")
+            return self._parse_issue(response)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return None
+            raise
     
     async def _get_issue_by_id_async(self, issue_id: str) -> Optional[Dict[str, Any]]:
         """Fetch single issue from JIRA."""
@@ -580,20 +638,33 @@ class JiraConnector:
                 "status": "Open",
                 "created": datetime.now().isoformat()
             }
-        
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(
-            self._create_issue_async(
-                summary, description, issue_type, priority,
-                show_name, cost_impact, delay_days
-            )
-        )
+
+        fields = {
+            "project": {"key": self.project_key},
+            "summary": summary,
+            "description": {
+                "type": "doc",
+                "version": 1,
+                "content": [{"type": "paragraph", "content": [{"type": "text", "text": description}]}],
+            },
+            "issuetype": {"name": issue_type},
+            "priority": {"name": priority},
+        }
+
+        if show_name and self.cf_show_name:
+            fields[self.cf_show_name] = show_name
+        if cost_impact and self.cf_cost_impact:
+            fields[self.cf_cost_impact] = cost_impact
+        if delay_days and self.cf_delay_days:
+            fields[self.cf_delay_days] = delay_days
+
+        response = self._sync_request(method="POST", endpoint="/rest/api/3/issue", data={"fields": fields})
+
+        return {
+            "issue_id": response.get("key"),
+            "issue_url": f"{self.api_url}/browse/{response.get('key')}",
+            "created": True,
+        }
     
     async def _create_issue_async(
         self,

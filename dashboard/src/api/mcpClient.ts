@@ -5,6 +5,17 @@
  * for live Pareto analysis and operational data.
  */
 
+// Type fallback for environments where Vite types aren't picked up by tooling
+export {};
+declare global {
+  interface ImportMetaEnv {
+    VITE_MCP_URL?: string;
+  }
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}
+
 const MCP_BASE_URL = import.meta.env.VITE_MCP_URL || 'http://localhost:8000';
 
 export interface MCPResponse<T> {
@@ -42,6 +53,26 @@ export interface ChurnSignalsResponse {
   cohorts: ChurnCohort[];
   retention_metrics: RetentionMetrics;
   pareto_analysis?: ParetoAnalysis;
+}
+
+export interface ProductionIssue {
+  issue_id: string;
+  title: string;
+  status: string;
+  severity: string;
+  priority?: string;
+  show?: string;
+  cost_overrun?: number;
+  delay_days?: number;
+  revenue_at_risk?: number;
+  days_open?: number;
+  jira_url?: string;
+}
+
+export interface ProductionIssuesResponse {
+  issues: ProductionIssue[];
+  cost_summary?: Record<string, unknown>;
+  pareto_analysis?: Record<string, unknown>;
 }
 
 /**
@@ -117,6 +148,27 @@ export async function getChurnSignals(
   const response = await queryResource<{ result: ChurnSignalsResponse }>(
     'churn_signals',
     { risk_threshold: riskThreshold }
+  );
+
+  if (response.success && response.data) {
+    return response.data.result;
+  }
+
+  return null;
+}
+
+/**
+ * Get production issues (Jira-backed when enabled)
+ */
+export async function getProductionIssues(params: {
+  severity?: string;
+  status?: string[];
+  limit?: number;
+  include_pareto?: boolean;
+} = {}): Promise<ProductionIssuesResponse | null> {
+  const response = await queryResource<{ result: ProductionIssuesResponse }>(
+    'production_issues',
+    params
   );
 
   if (response.success && response.data) {
