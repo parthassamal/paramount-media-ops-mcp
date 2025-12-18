@@ -92,7 +92,7 @@ class TestInfrastructureEndpoints:
         assert response.status_code == 200
         services = response.json()
         
-        valid_statuses = ["healthy", "degraded", "critical"]
+        valid_statuses = ["healthy", "warning", "critical"]
         for service in services:
             assert service["status"] in valid_statuses
     

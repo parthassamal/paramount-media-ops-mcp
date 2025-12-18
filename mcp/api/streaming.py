@@ -82,8 +82,18 @@ async def get_qoe_metrics(
 ) -> List[QoEMetrics]:
     """Get streaming QoE metrics."""
     try:
+        # Convert time_range from hours to string format
+        if time_range <= 1:
+            time_range_str = "last_1_hour"
+        elif time_range <= 24:
+            time_range_str = "last_24_hours"
+        elif time_range <= 168:
+            time_range_str = "last_7_days"
+        else:
+            time_range_str = "last_30_days"
+            
         metrics_data = conviva.get_qoe_metrics(
-            time_range=time_range,
+            time_range=time_range_str,
             dimension=dimension,
             content_filter=content_id
         )
@@ -91,27 +101,32 @@ async def get_qoe_metrics(
         # Convert to API model
         metrics = []
         
+        # Safely get metrics with defaults
+        buffering_rate = metrics_data.get("buffering_rate", 0)
+        video_start_failures = metrics_data.get("video_start_failures", 0)
+        average_bitrate = metrics_data.get("average_bitrate_mbps", metrics_data.get("average_bitrate", 0))
+        
         metrics.append(QoEMetrics(
             metric_name="buffering_rate",
-            value=metrics_data["buffering_rate"],
+            value=buffering_rate,
             threshold=settings.conviva_buffering_threshold,
-            status="good" if metrics_data["buffering_rate"] < settings.conviva_buffering_threshold else "critical",
+            status="good" if buffering_rate < settings.conviva_buffering_threshold else "critical",
             unit="percentage"
         ))
         
         metrics.append(QoEMetrics(
             metric_name="video_start_failures",
-            value=metrics_data["video_start_failures"],
+            value=video_start_failures,
             threshold=1000,
-            status="good" if metrics_data["video_start_failures"] < 1000 else "warning",
+            status="good" if video_start_failures < 1000 else "warning",
             unit="count"
         ))
         
         metrics.append(QoEMetrics(
             metric_name="average_bitrate",
-            value=metrics_data["average_bitrate_mbps"],
+            value=average_bitrate,
             threshold=2.5,
-            status="good" if metrics_data["average_bitrate_mbps"] > 2.5 else "warning",
+            status="good" if average_bitrate > 2.5 else "warning",
             unit="mbps"
         ))
         
@@ -141,7 +156,17 @@ async def get_buffering_hotspots(
 ) -> Dict[str, Any]:
     """Get buffering hotspots analysis."""
     try:
-        return conviva.get_buffering_hotspots(time_range=time_range)
+        # Convert time_range from hours to string format
+        if time_range <= 1:
+            time_range_str = "last_1_hour"
+        elif time_range <= 24:
+            time_range_str = "last_24_hours"
+        elif time_range <= 168:
+            time_range_str = "last_7_days"
+        else:
+            time_range_str = "last_30_days"
+            
+        return conviva.get_buffering_hotspots(time_range=time_range_str)
     except Exception as e:
         logger.error("buffering_hotspots_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to analyze buffering: {str(e)}")
@@ -175,15 +200,23 @@ async def get_service_health(
 ) -> List[ServiceHealth]:
     """Get infrastructure service health."""
     try:
-        services_data = newrelic.get_service_breakdown(time_range=time_range)
+        # Convert time_range from hours to string format
+        if time_range <= 1:
+            time_range_str = "last_1_hour"
+        elif time_range <= 24:
+            time_range_str = "last_24_hours"
+        else:
+            time_range_str = "last_7_days"
+            
+        services_data = newrelic.get_service_breakdown(time_range=time_range_str)
         
         return [
             ServiceHealth(
-                service_name=svc["service"],
-                status=svc["health_status"],
-                response_time_ms=svc["response_time_avg"],
-                error_rate=svc["error_rate"],
-                throughput_rpm=svc["throughput"]
+                service_name=svc.get("service_name", svc.get("service", "unknown")),
+                status=svc.get("health_status", "unknown"),
+                response_time_ms=svc.get("response_time_avg", 0),
+                error_rate=svc.get("error_rate", 0),
+                throughput_rpm=svc.get("throughput", 0)
             )
             for svc in services_data
         ]

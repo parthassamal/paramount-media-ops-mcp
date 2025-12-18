@@ -336,6 +336,22 @@ class NewRelicClient:
         
         return result
     
+    def get_service_breakdown(self, time_range: str = "last_1_hour") -> List[Dict[str, Any]]:
+        """
+        Get service-level breakdown of APM metrics.
+        
+        Args:
+            time_range: Time range for metrics
+            
+        Returns:
+            List of service metrics
+        """
+        if self.mock_mode:
+            return self._get_mock_service_breakdown()
+        
+        # In live mode, fetch from NewRelic API
+        return self._fetch_service_breakdown_sync(time_range)
+    
     def _get_mock_service_breakdown(self) -> List[Dict[str, Any]]:
         """Generate mock service breakdown."""
         services = [
@@ -364,7 +380,11 @@ class NewRelicClient:
                 apdex_score=metrics["apdex_score"]
             )
             breakdown.append({
+                "service_name": service,
                 "service": service,
+                "response_time_avg": metrics["response_time_avg_ms"],
+                "throughput": metrics["throughput_rpm"],
+                "error_rate": metrics["error_rate"],
                 "metrics": metrics,
                 "health_status": apm.get_health_status(),
                 "impact_score": self._calculate_service_impact(metrics)
@@ -372,6 +392,32 @@ class NewRelicClient:
         
         # Sort by impact score (highest first)
         return sorted(breakdown, key=lambda x: x["impact_score"], reverse=True)
+    
+    def _fetch_service_breakdown_sync(self, time_range: str) -> List[Dict[str, Any]]:
+        """Fetch service breakdown from NewRelic API (synchronous wrapper)."""
+        # Placeholder for real API implementation
+        return self._get_mock_service_breakdown()
+    
+    def get_error_analysis(self, time_range: str = "last_1_hour") -> Dict[str, Any]:
+        """
+        Get error analysis with Pareto breakdown.
+        
+        Args:
+            time_range: Time range for analysis
+            
+        Returns:
+            Error analysis with Pareto insights
+        """
+        if self.mock_mode:
+            return self._get_mock_error_analysis()
+        
+        # In live mode, fetch from NewRelic API
+        return self._fetch_error_analysis_sync(time_range)
+    
+    def _fetch_error_analysis_sync(self, time_range: str) -> Dict[str, Any]:
+        """Fetch error analysis from NewRelic API (synchronous wrapper)."""
+        # Placeholder for real API implementation
+        return self._get_mock_error_analysis()
     
     def _calculate_service_impact(self, metrics: Dict[str, Any]) -> float:
         """Calculate service impact score based on metrics."""
