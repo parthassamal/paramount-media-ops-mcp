@@ -11,7 +11,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 import httpx
 
@@ -107,6 +107,20 @@ class AtlassianClient:
         if self._client is None:
             self._client = httpx.AsyncClient(timeout=30.0)
         return self._client
+    
+    # ==================== Convenience Aliases ====================
+    
+    def get_spaces(self) -> List[Dict[str, Any]]:
+        """Alias for get_confluence_spaces."""
+        return self.get_confluence_spaces()
+    
+    def get_pages(self, space_key: str = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """Alias for get_confluence_pages."""
+        return self.get_confluence_pages(space_key=space_key, limit=limit)
+    
+    def create_page(self, space_key: str, title: str, content: str, parent_id: str = None) -> Dict[str, Any]:
+        """Alias for create_confluence_page."""
+        return self.create_confluence_page(space_key=space_key, title=title, content=content, parent_id=parent_id)
     
     # ==================== JIRA Methods ====================
     

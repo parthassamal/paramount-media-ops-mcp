@@ -104,7 +104,7 @@ class ConfluenceSpace(BaseModel):
 async def get_spaces() -> List[ConfluenceSpace]:
     """Get all Confluence spaces."""
     try:
-        spaces = atlassian.get_confluence_spaces()
+        spaces = atlassian.get_spaces()
         return [ConfluenceSpace(**space) for space in spaces]
     except Exception as e:
         logger.error("confluence_spaces_failed", error=str(e))
@@ -135,7 +135,7 @@ async def get_pages(
 ) -> List[ConfluencePage]:
     """Get pages in a Confluence space."""
     try:
-        pages = atlassian.get_confluence_pages(space_key=space_key, limit=limit)
+        pages = atlassian.get_pages(space_key=space_key, limit=limit)
         
         # Filter by search term if provided
         if search:
@@ -169,7 +169,7 @@ async def get_page(
 ) -> ConfluencePage:
     """Get a specific Confluence page."""
     try:
-        pages = atlassian.get_confluence_pages(limit=100)
+        pages = atlassian.get_pages(limit=100)
         page = next((p for p in pages if p["id"] == page_id), None)
         
         if not page:
@@ -209,7 +209,7 @@ async def create_page(request: CreatePageRequest = Body(...)) -> ConfluencePage:
     try:
         logger.info("confluence_create_page", space=request.space_key, title=request.title)
         
-        page = atlassian.create_confluence_page(
+        page = atlassian.create_page(
             space_key=request.space_key,
             title=request.title,
             content=request.content,
@@ -248,7 +248,7 @@ async def search_pages(
         logger.info("confluence_search", query=q, space=space_key)
         
         # Get all pages and filter (simplified search)
-        pages = atlassian.get_confluence_pages(space_key=space_key, limit=limit * 2)
+        pages = atlassian.get_pages(space_key=space_key, limit=limit * 2)
         
         # Filter by search term
         results = [

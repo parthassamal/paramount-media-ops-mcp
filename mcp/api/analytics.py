@@ -122,6 +122,17 @@ async def get_ltv_analysis() -> LTVAnalysis:
     """Get lifetime value analysis."""
     try:
         analysis = analytics.get_ltv_analysis()
+        
+        # Ensure required fields are present
+        if "ltv_by_cohort" not in analysis:
+            analysis["ltv_by_cohort"] = {}
+        if "avg_subscriber_ltv" not in analysis:
+            # Calculate from cohorts if available
+            cohorts = analytics.get_churn_cohorts()
+            total_subs = sum(c.get("size", 0) for c in cohorts)
+            total_ltv = sum(c.get("avg_lifetime_value", 0) * c.get("size", 0) for c in cohorts)
+            analysis["avg_subscriber_ltv"] = total_ltv / total_subs if total_subs > 0 else 0
+        
         return LTVAnalysis(**analysis)
     except Exception as e:
         logger.error("ltv_analysis_failed", error=str(e))
@@ -148,15 +159,21 @@ async def get_subscriber_stats() -> Dict[str, Any]:
         cohorts = analytics.get_churn_cohorts()
         ltv = analytics.get_ltv_analysis()
         
-        total_subscribers = sum(c["subscriber_count"] for c in cohorts)
-        high_risk_count = sum(c["subscriber_count"] for c in cohorts if c["risk_level"] == "High")
+        # Use "size" field from cohorts (not "subscriber_count")
+        total_subscribers = sum(c.get("size", 0) for c in cohorts)
+        
+        # Calculate high risk based on churn_risk_score
+        high_risk_count = sum(
+            c.get("size", 0) for c in cohorts 
+            if c.get("churn_risk_score", 0) >= 0.7
+        )
         
         return {
             "total_subscribers": total_subscribers,
             "high_risk_subscribers": high_risk_count,
             "churn_rate": high_risk_count / total_subscribers if total_subscribers > 0 else 0,
-            "total_ltv_at_risk": ltv["total_ltv_at_risk"],
-            "avg_subscriber_ltv": ltv["avg_subscriber_ltv"],
+            "total_ltv_at_risk": ltv.get("total_ltv_at_risk", 0),
+            "avg_subscriber_ltv": ltv.get("avg_subscriber_ltv", 0),
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:

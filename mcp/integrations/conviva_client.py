@@ -466,22 +466,25 @@ class ConvivaClient:
         
         return result
     
-    def get_buffering_hotspots(self) -> Dict[str, Any]:
+    def get_buffering_hotspots(self, time_range: str = "last_24_hours") -> Dict[str, Any]:
         """
         Identify geographic and device hotspots with high buffering.
         
+        Args:
+            time_range: Time range for analysis
+            
         Returns:
             Hotspot analysis with Pareto insights
         """
         # Get metrics by country
         country_metrics = self.get_qoe_metrics(
-            time_range="last_24_hours",
+            time_range=time_range,
             dimension="country"
         )
         
         # Get metrics by device
         device_metrics = self.get_qoe_metrics(
-            time_range="last_24_hours",
+            time_range=time_range,
             dimension="device_type"
         )
         
