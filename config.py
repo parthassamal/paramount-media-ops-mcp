@@ -310,6 +310,34 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./paramount_ops.db"
     
     # ==========================================================================
+    # Computed Properties
+    # ==========================================================================
+    @property
+    def atlassian_enabled(self) -> bool:
+        """Check if Atlassian integration (JIRA/Confluence) is enabled."""
+        return self.jira_enabled or self.confluence_enabled
+    
+    @property
+    def atlassian_api_url(self) -> str:
+        """Get Atlassian API URL (uses JIRA URL for Cloud instances)."""
+        return self.jira_api_url
+    
+    @property
+    def atlassian_api_email(self) -> str:
+        """Get Atlassian API email."""
+        return self.jira_api_email
+    
+    @property
+    def atlassian_api_token(self) -> str:
+        """Get Atlassian API token."""
+        return self.jira_api_token
+    
+    @property
+    def atlassian_request_timeout(self) -> int:
+        """Get Atlassian request timeout."""
+        return self.jira_request_timeout
+    
+    # ==========================================================================
     # Environment-Specific Presets
     # ==========================================================================
     @property
