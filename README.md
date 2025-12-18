@@ -32,6 +32,14 @@
 
 **Hackathon reality (E2E strategy):** run a **hybrid demo** where **churn + analytics remain mocked** (to preserve the core Pareto churn tactics), while **Atlassian (Jira + Confluence) is live** via a free Atlassian Cloud instance. This gives you real operational artifacts (tickets + runbooks) without depending on paid telemetry vendors.
 
+### 🤖 The AI Story: Streaming QoE → Retention → ROI
+
+The core demo narrative is **AI-driven ROI**:
+- **Observe**: streaming QoE + production ops signals (tickets + runbooks)
+- **Explain**: LLM tools + Pareto identify the top 20% drivers of churn/impact
+- **Act**: generate targeted retention campaigns and operational mitigations
+- **Measure**: projected recovery, ROI, and prioritized “do-this-first” plan
+
 ### 💰 Addressable Opportunity: **$750M/year**
 
 | Domain | Impact | Top Priority |
@@ -455,6 +463,8 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 </div>
 
 The operations dashboard provides real-time visibility into streaming operations, powered by Pareto-driven intelligence.
+
+**Figma integration is included** via `mcp/integrations/figma_client.py` (design tokens, components, variables API, comments). This lets the MCP server (and agents) read your design system and keep the UI consistent while iterating fast in a hackathon.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
