@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     # ==========================================================================
     jira_enabled: bool = True
     jira_api_url: str = Field(
-        default="https://paramount.atlassian.net",
+        default="https://paramounthackathon.atlassian.net",
         description="JIRA instance URL"
     )
     jira_api_email: str = Field(
@@ -238,6 +238,33 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     
     # ==========================================================================
+    # Confluence Configuration
+    # Documentation and knowledge base integration
+    # Uses mcp-atlassian package for API calls
+    # ==========================================================================
+    confluence_enabled: bool = True
+    confluence_api_url: str = Field(
+        default="https://paramounthackathon.atlassian.net",
+        description="Confluence instance URL (same as JIRA for Cloud)"
+    )
+    confluence_username: str = Field(
+        default="",
+        description="Confluence username (email for Cloud)"
+    )
+    confluence_api_token: str = Field(
+        default="",
+        description="Confluence API token (same as JIRA for Cloud)"
+    )
+    confluence_space_key: str = Field(
+        default="OPS",
+        description="Default Confluence space key"
+    )
+    confluence_request_timeout: int = Field(
+        default=30,
+        description="Request timeout in seconds"
+    )
+    
+    # ==========================================================================
     # Figma Configuration
     # Design system and dashboard design integration
     # Enterprise features: Design systems, branching, analytics
@@ -320,7 +347,7 @@ class StagingSettings(Settings):
     log_format: Literal["json", "text"] = "json"
     
     # Staging URLs (override in .env)
-    jira_api_url: str = "https://paramount-staging.atlassian.net"
+    jira_api_url: str = "https://paramounthackathon.atlassian.net"
     conviva_api_url: str = "https://api.conviva.com/insights/2.4"
     analytics_api_url: str = "https://analytics-staging.paramount.com/api/v2"
 
