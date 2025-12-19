@@ -17,3 +17,5 @@ scipy==1.14.0               # Statistical analysis
 
 # Note: Install with: pip install -r requirements-ai.txt
 
+
+
