@@ -8,8 +8,9 @@ import { ParetoChart } from "./components/ParetoChart";
 import { Moon, Sun, Download, Wifi, Palette } from "lucide-react";
 import { ImageWithFallback } from "./components/figma/ImageWithFallback";
 import paramountLogo from "../assets/3f3a14d838a1424580296a3c04cfff3bf623a992.png";
+import ErrorBoundary from "../utils/ErrorBoundary";
 
-export default function App() {
+function AppContent() {
   const [darkMode, setDarkMode] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [isFigmaLive, setIsFigmaLive] = useState(false);
@@ -151,13 +152,6 @@ export default function App() {
                     src={paramountLogo}
                     alt="Paramount+ Logo"
                     className="w-10 h-10"
-                    fallback={
-                      <img
-                        src={paramountLogo}
-                        alt="Paramount+ Logo"
-                        className="w-10 h-10"
-                      />
-                    }
                   />
                   <div>
                     <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
@@ -256,5 +250,14 @@ export default function App() {
         </footer>
       </div>
     </div>
+  );
+}
+
+// Wrap app with Error Boundary
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 }

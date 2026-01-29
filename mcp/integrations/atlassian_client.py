@@ -15,7 +15,16 @@ from typing import Optional, List, Dict, Any
 
 import httpx
 
-logger = logging.getLogger(__name__)
+from mcp.utils.error_handler import (
+    ConnectionError,
+    RateLimitError,
+    DataNotFoundError,
+    retry_with_backoff,
+    circuit_breaker
+)
+from mcp.utils.logger import get_logger, log_performance
+
+logger = get_logger(__name__)
 
 
 @dataclass

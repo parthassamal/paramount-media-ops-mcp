@@ -5,15 +5,16 @@ Provides knowledge base, documentation, and collaboration features.
 """
 
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, Query, Body
+from fastapi import APIRouter, HTTPException, Query, Body, status
 from pydantic import BaseModel, Field
 from datetime import datetime
 
 from mcp.integrations import AtlassianClient
 from config import settings
-import structlog
+from mcp.utils.error_handler import ServiceError, ConnectionError, DataNotFoundError, retry_with_backoff
+from mcp.utils.logger import get_logger, log_performance
 
-logger = structlog.get_logger()
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/confluence", tags=["Confluence Knowledge Base"])
 

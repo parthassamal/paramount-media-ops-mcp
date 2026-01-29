@@ -37,7 +37,7 @@ from mcp.tools import (
     create_forecast_revenue,
     create_generate_campaign
 )
-from mcp.api import jira_router, confluence_router, analytics_router, streaming_router, figma_router, adobe_router
+from mcp.api import jira_router, confluence_router, analytics_router, streaming_router, figma_router, adobe_router, ai_router
 
 # Configure structured logging
 structlog.configure(
@@ -358,6 +358,7 @@ app.include_router(analytics_router)
 app.include_router(streaming_router)
 app.include_router(figma_router)
 app.include_router(adobe_router)
+app.include_router(ai_router)  # Patent-worthy AI services
 
 # Custom Swagger UI with styling
 @app.get("/docs", include_in_schema=False)

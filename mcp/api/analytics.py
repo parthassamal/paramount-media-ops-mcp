@@ -5,15 +5,16 @@ Provides subscriber analytics, churn prediction, and retention insights.
 """
 
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from datetime import datetime
 
 from mcp.integrations import AnalyticsClient
 from config import settings
-import structlog
+from mcp.utils.error_handler import ServiceError, ValidationError, DataNotFoundError, retry_with_backoff
+from mcp.utils.logger import get_logger, log_performance
 
-logger = structlog.get_logger()
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/analytics", tags=["Analytics & Churn Intelligence"])
 

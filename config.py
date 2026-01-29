@@ -250,11 +250,29 @@ class Settings(BaseSettings):
     )
     
     # ==========================================================================
-    # LLM Configuration
-    # AI/ML integrations
+    # AI/ML Configuration
+    # Local AI models (no external API dependencies)
     # ==========================================================================
-    anthropic_api_key: str = ""
-    openai_api_key: str = ""
+    ai_models_cache_dir: str = Field(
+        default="./models_cache",
+        description="Directory for caching downloaded AI models"
+    )
+    ai_embeddings_model: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        description="Sentence transformer model for embeddings"
+    )
+    ai_spacy_model: str = Field(
+        default="en_core_web_sm",
+        description="spaCy language model"
+    )
+    ai_whisper_model: str = Field(
+        default="base",
+        description="Whisper model size (tiny, base, small, medium, large)"
+    )
+    ai_enable_gpu: bool = Field(
+        default=False,
+        description="Enable GPU acceleration for AI models (requires CUDA)"
+    )
     
     # ==========================================================================
     # Confluence Configuration

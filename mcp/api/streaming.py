@@ -5,15 +5,16 @@ Provides Quality of Experience metrics, APM data, and infrastructure health.
 """
 
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from datetime import datetime
 
 from mcp.integrations import ConvivaClient, NewRelicClient
 from config import settings
-import structlog
+from mcp.utils.error_handler import ServiceError, ConnectionError, TimeoutError, retry_with_backoff, circuit_breaker
+from mcp.utils.logger import get_logger, log_performance
 
-logger = structlog.get_logger()
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/streaming", tags=["Streaming QoE & Infrastructure"])
 

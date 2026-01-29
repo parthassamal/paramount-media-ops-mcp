@@ -1,21 +1,70 @@
 # AI/ML Dependencies for Paramount+ Media Operations MCP Server
+# Patent-Worthy AI Stack - Zero External API Dependencies
 
-# LLM APIs
-anthropic==0.40.0           # Claude API for natural language processing
-openai==1.50.0              # GPT-4 API (alternative LLM provider)
-
-# Machine Learning
-scikit-learn==1.6.0         # ML utilities and algorithms
+# ==========================================================================
+# Core Machine Learning
+# ==========================================================================
+scikit-learn==1.6.0         # ML algorithms, clustering, classification
 numpy==2.2.0                # Numerical computing
 scipy==1.14.0               # Statistical analysis
+pandas==2.1.3               # Data manipulation
 
-# Optional: Advanced ML (uncomment if needed)
-# sentence-transformers==3.3.0  # Semantic search and embeddings
-# faiss-cpu==1.9.0              # Vector similarity search
-# lightgbm==4.5.0               # Gradient boosting for churn prediction
-# prophet==1.1.6                # Time-series forecasting
+# ==========================================================================
+# NLP & Language Models
+# ==========================================================================
+spacy==3.7.0                # Advanced NLP and entity recognition
+sentence-transformers==3.3.0 # Semantic search (BERT embeddings)
+transformers==4.36.0        # HuggingFace models (BERT, GPT-2, CLIP)
+torch==2.1.0                # PyTorch deep learning framework
+textblob==0.19.0            # Sentiment analysis
+nltk==3.8.0                 # NLP toolkit
+
+# ==========================================================================
+# RAG & Vector Databases
+# ==========================================================================
+chromadb==0.4.22            # Vector database for embeddings
+langchain==0.1.0            # RAG orchestration framework
+langchain-community==0.0.13 # LangChain community integrations
+faiss-cpu==1.8.0            # Facebook AI Similarity Search (CPU)
+
+# ==========================================================================
+# Multi-Agent Systems
+# ==========================================================================
+pyautogen==0.2.5            # Microsoft AutoGen for multi-agent
+crewai==0.11.0              # CrewAI agent framework
+langgraph==0.0.26           # LangGraph for state machines
+dspy-ai==2.4.0              # DSPy for LLM optimization
+
+# ==========================================================================
+# Machine Learning Models
+# ==========================================================================
+lightgbm==4.5.0             # Gradient boosting for churn prediction
+xgboost==2.0.3              # Alternative gradient boosting
+prophet==1.1.6              # Facebook Prophet time-series forecasting
+
+# ==========================================================================
+# Computer Vision
+# ==========================================================================
+opencv-python==4.9.0        # Image processing
+pillow==10.2.0              # Image manipulation
+ultralytics==8.1.0          # YOLOv8 object detection
+
+# ==========================================================================
+# Voice AI
+# ==========================================================================
+openai-whisper==20231117    # OpenAI Whisper speech-to-text (open-source)
+TTS==0.21.0                 # Coqui TTS for text-to-speech
+
+# ==========================================================================
+# Advanced Statistics & Bayesian Inference
+# ==========================================================================
+statsmodels==0.14.1         # ARIMA, VAR, time-series analysis
+pymc==5.10.0                # Bayesian inference and probabilistic programming
+arviz==0.17.0               # Bayesian model diagnostics
+lifelines==0.27.8           # Survival analysis (Kaplan-Meier, Cox PH)
 
 # Note: Install with: pip install -r requirements-ai.txt
+# Post-install: Run scripts/install_ai_models.sh to download language models
 
 
 

@@ -1,14 +1,15 @@
 """Adobe Cloud Services API endpoints for report generation and storage."""
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, Literal
-import structlog
 import os
 import json
+from mcp.utils.error_handler import ServiceError, ConnectionError, TimeoutError, retry_with_backoff
+from mcp.utils.logger import get_logger, log_performance
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/adobe", tags=["adobe"])
 

@@ -11,9 +11,6 @@ pandas>=2.1.3
 # MCP Protocol
 mcp>=1.23.0  # Security fixes: DNS rebinding, DoS vulnerabilities patched
 
-# AI/LLM integration
-anthropic>=0.40.0
-
 # HTTP client
 requests>=2.31.0
 httpx>=0.27.0

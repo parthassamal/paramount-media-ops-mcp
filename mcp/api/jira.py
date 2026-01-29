@@ -5,15 +5,22 @@ Provides production issue tracking, project management, and analytics.
 """
 
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, HTTPException, Query, Body
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Query, Body, status
+from pydantic import BaseModel, Field, validator
 from datetime import datetime
 
 from mcp.integrations import JiraConnector
 from config import settings
-import structlog
+from mcp.utils.error_handler import (
+    ServiceError,
+    ConnectionError,
+    RateLimitError,
+    DataNotFoundError,
+    retry_with_backoff
+)
+from mcp.utils.logger import get_logger, log_performance
 
-logger = structlog.get_logger()
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/jira", tags=["JIRA Production Tracking"])
 
@@ -112,9 +119,13 @@ class JiraStats(BaseModel):
     """,
     responses={
         200: {"description": "Successfully retrieved issues"},
-        500: {"description": "Failed to fetch issues from JIRA"}
+        503: {"description": "JIRA service unavailable"},
+        429: {"description": "Rate limit exceeded"},
+        500: {"description": "Internal server error"}
     }
 )
+@log_performance(operation="get_jira_issues")
+@retry_with_backoff(max_retries=2, exceptions=(ConnectionError, ServiceError))
 async def get_production_issues(
     status: Optional[str] = Query(None, description="Filter by status"),
     severity: Optional[str] = Query(None, description="Filter by severity"),
@@ -125,11 +136,12 @@ async def get_production_issues(
     """Get production issues with optional filters."""
     try:
         logger.info(
-            "jira_issues_request",
+            "Fetching JIRA issues",
             status=status,
             severity=severity,
             show_name=show_name,
-            days_since_created=days_since_created
+            days_since_created=days_since_created,
+            limit=limit
         )
         
         issues = jira.get_production_issues(
@@ -142,26 +154,55 @@ async def get_production_issues(
         # Map integration fields to API model fields
         mapped_issues = []
         for issue in issues[:limit]:
-            mapped_issues.append(JiraIssue(
-                id=issue.get("issue_id", ""),
-                key=issue.get("issue_id", ""),
-                summary=issue.get("title", ""),
-                status=issue.get("status", ""),
-                severity=issue.get("severity", ""),
-                show_name=issue.get("show", ""),
-                cost_impact=issue.get("cost_overrun", 0),
-                delay_days=issue.get("delay_days", 0),
-                created=issue.get("created", datetime.now().isoformat()),
-                updated=issue.get("updated", datetime.now().isoformat()),
-                assignee=issue.get("assignee", None),
-                url=f"{settings.jira_api_url}/browse/{issue.get('issue_id', '')}"
-            ))
+            try:
+                mapped_issues.append(JiraIssue(
+                    id=issue.get("issue_id", ""),
+                    key=issue.get("issue_id", ""),
+                    summary=issue.get("title", ""),
+                    status=issue.get("status", ""),
+                    severity=issue.get("severity", ""),
+                    show_name=issue.get("show", ""),
+                    cost_impact=issue.get("cost_overrun", 0),
+                    delay_days=issue.get("delay_days", 0),
+                    created=issue.get("created", datetime.now().isoformat()),
+                    updated=issue.get("updated", datetime.now().isoformat()),
+                    assignee=issue.get("assignee", None),
+                    url=f"{settings.jira_api_url}/browse/{issue.get('issue_id', '')}"
+                ))
+            except Exception as e:
+                logger.warning("Failed to map issue", issue_id=issue.get("issue_id"), error=str(e))
+                continue
         
+        logger.info("JIRA issues retrieved", count=len(mapped_issues))
         return mapped_issues
-        
+    
+    except ConnectionError as e:
+        logger.error("JIRA connection failed", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to connect to JIRA service"
+        )
+    except RateLimitError as e:
+        logger.warning("JIRA rate limit exceeded", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="JIRA API rate limit exceeded. Please try again later."
+        )
+    except DataNotFoundError as e:
+        logger.info("No issues found", error=str(e))
+        return []
+    except ValueError as e:
+        logger.warning("Invalid parameters", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        )
     except Exception as e:
-        logger.error("jira_issues_failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to fetch JIRA issues: {str(e)}")
+        logger.exception("Failed to fetch JIRA issues")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error while fetching JIRA issues"
+        )
 
 
 @router.get(

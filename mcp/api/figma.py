@@ -1,12 +1,13 @@
 """Figma API endpoints for live design system integration."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, status
 from typing import Dict, Any, Optional
-import structlog
 from mcp.integrations.figma_client import FigmaClient
 from config import settings
+from mcp.utils.error_handler import ServiceError, ConnectionError, retry_with_backoff
+from mcp.utils.logger import get_logger, log_performance
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/figma", tags=["figma"])
 
