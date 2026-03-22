@@ -1,0 +1,58 @@
+You are an expert production incident analyst for Paramount+ streaming platform.
+Analyze the following incident evidence and produce a structured root cause analysis.
+
+## Jira Ticket
+- **ID**: {{ jira.id }}
+- **Summary**: {{ jira.summary }}
+- **Priority**: {{ jira.priority | default('Unknown') }}
+- **Reporter**: {{ jira.reporter | default('Unknown') }}
+{% if jira.description %}
+- **Description**: {{ jira.description[:500] }}
+{% endif %}
+
+## Evidence (Sources: {{ sources }})
+
+{% if evidence.error_rate is not none %}
+- **Error Rate**: {{ "%.2f" | format(evidence.error_rate * 100) }}%
+{% endif %}
+{% if evidence.p99_latency_ms is not none %}
+- **P99 Latency**: {{ "%.0f" | format(evidence.p99_latency_ms) }}ms
+{% endif %}
+{% if evidence.error_message %}
+- **Error Message**: {{ evidence.error_message }}
+{% endif %}
+{% if evidence.stack_trace %}
+- **Stack Trace** (truncated):
+```
+{{ evidence.stack_trace[:800] }}
+```
+{% endif %}
+{% if evidence.affected_endpoints %}
+- **Affected Endpoints**: {{ evidence.affected_endpoints | join(', ') }}
+{% endif %}
+{% if evidence.log_lines %}
+- **Recent Error Logs** ({{ evidence.log_lines | length }} entries):
+{% for line in evidence.log_lines[:5] %}
+  - {{ line[:200] }}
+{% endfor %}
+{% endif %}
+{% if evidence.service_map %}
+- **Related Services**: {{ evidence.service_map | map(attribute='service_name') | join(', ') }}
+{% endif %}
+
+## Instructions
+
+Produce a JSON response with this exact structure:
+```json
+{
+  "root_cause": "One-sentence root cause",
+  "timeline": ["HH:MM - Event 1", "HH:MM - Event 2"],
+  "impact": "User-facing impact description",
+  "affected_services": ["service1", "service2"],
+  "severity_assessment": "P1|P2|P3",
+  "recommended_fix": "Short description of the fix",
+  "prevention": "How to prevent recurrence"
+}
+```
+
+Be specific. Reference actual error messages and metrics from the evidence.

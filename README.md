@@ -12,9 +12,10 @@
 [![Dashboard](https://img.shields.io/badge/React-Dashboard-61DAFB?style=flat-square&logo=react&logoColor=black)](./dashboard/)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](./LICENSE)
 
-**AI-Driven Streaming Operations Platform | MCP Server | Pareto Intelligence | ML-Powered Insights**
+**AI-Driven Streaming Operations Platform | MCP Server | Pareto Intelligence | ML-Powered Insights | RCA Pipeline v2**
 
 [Quick Start](#-quick-start) •
+[RCA Pipeline v2](#-rca-pipeline-v2) •
 [AI Features](#-ai-features-new) •
 [Architecture](#-architecture) •
 [Resources](#-resources) •
@@ -71,7 +72,173 @@ The core demo narrative is **AI-driven ROI**:
 
 ---
 
-## 🏆 **Patent-Worthy AI Innovation** ⚡ ZERO External APIs
+## RCA Pipeline v2
+
+**Automated Root Cause Analysis: PROD Issues -> Regression Tests -> TestRail Suites**
+
+The v2 pipeline analyzes production incidents from **New Relic + Datadog + Jira**, generates regression tests using AI, and writes them directly into TestRail suites -- with a mandatory human review gate.
+
+### End-to-End Flow
+
+```
+PROD alert fires (New Relic / Datadog)
+  |
+Jira ticket raised
+  |
+Step 1:  90-day duplicate detection + auto-escalate if systemic
+  |
+Step 2:  Capture pre-mitigation evidence
+         -> New Relic: NerdGraph APM + incidents + service map
+         -> Datadog: Incidents + Monitors + Error Logs
+         -> Normalize into EvidenceBundle (source-agnostic)
+  |
+Step 3:  AI summarize using EvidenceBundle + Jira fields (Jinja2 prompt)
+  |
+Step 4:  TestRail matching (50 / 75 / 100% thresholds)
+  |
+  |-- 100% exact match + automated -> investigate why automation missed it
+  |-- 75-99% probable -> auto-suggest to engineer for confirmation
+  `-- < 75% -> generate test cases
+       |
+       LLM-as-judge scores cases (0-5)
+       |
+       Human review gate (24hr SLA hard stop)
+       |
+Step 5: [AFTER APPROVAL]
+       -> Write approved cases to TestRail (add_case -> RCA section)
+       -> Set refs = Jira ticket ID on every case
+       -> Create targeted verification run (RCA-specific)
+       -> Append case IDs to active regression run
+  |
+Step 6:  Blast radius from EvidenceBundle service map
+         -> Define smoke, verification, regression scope
+  |
+Step 7:  Close Jira with full RCA artifact
+         (root cause, timeline, TestRail case IDs, run IDs, remediation owners)
+```
+
+### What Changed in v2
+
+| Area | v1 | v2 |
+|------|----|----|
+| Evidence ingestion | New Relic only | New Relic (NerdGraph) + Datadog (v2 SDK) |
+| Datadog | Not present | Full integration: incidents, monitors, APM traces |
+| New Relic | Basic APM fetch | NerdGraph GraphQL: issues, distributed traces, service map |
+| TestRail | Read + match only | Full write path: create cases, map to suite/section, add refs |
+| Evidence normalization | None | EvidenceBundle -- single unified schema |
+| Config | Single source | `OBSERVABILITY_SOURCE = newrelic \| datadog \| both` |
+
+### Key API Endpoints
+
+```bash
+# Run full pipeline for a Jira ticket
+POST /api/rca/pipeline/run
+{
+  "id": "PROD-1234",
+  "summary": "Auth service 500 errors on login",
+  "service": "auth-service",
+  "priority": "Critical"
+}
+
+# Capture pre-mitigation evidence (call BEFORE restart/rollback)
+POST /api/rca/evidence/capture
+{"service_name": "auth-service"}
+
+# Approve generated test cases + write to TestRail
+POST /api/rca/review/approve
+{"rca_id": "...", "reviewer_id": "engineer@company.com"}
+
+# Check pending reviews
+GET /api/rca/review/pending
+
+# Browse TestRail suites/sections for setup
+GET /api/rca/testrail/suites
+GET /api/rca/testrail/sections/{suite_id}
+
+# Direct observability queries
+GET /api/rca/datadog/incidents/{service_name}
+GET /api/rca/datadog/monitors/{service_name}
+POST /api/rca/newrelic/nrql  {"query": "SELECT count(*) FROM Transaction..."}
+```
+
+### Unified Evidence Model
+
+The `EvidenceBundle` is the core v2 abstraction. Every downstream stage (summarization, test generation, blast radius) works against this single model -- it never knows whether data came from New Relic or Datadog.
+
+```python
+class EvidenceBundle(BaseModel):
+    bundle_id: str
+    sources: List[Literal["newrelic", "datadog"]]
+    service_name: str
+    error_rate: Optional[float]
+    p99_latency_ms: Optional[float]
+    stack_trace: Optional[str]
+    affected_endpoints: List[str]
+    service_map: List[ServiceMapNode]  # For blast radius
+    log_lines: List[str]
+    raw_newrelic: Optional[dict]  # Audit trail
+    raw_datadog: Optional[dict]   # Audit trail
+```
+
+### v2 Architecture
+
+```
+mcp/
+├── models/
+│   ├── evidence_models.py      # EvidenceBundle, ServiceMapNode, SourceType
+│   ├── rca_models.py           # RCARecord, PipelineStage, MatchConfidence
+│   └── review_queue.py         # ReviewItem, ReviewStatus, SLA enforcement
+├── tools/
+│   ├── newrelic_tool.py        # NerdGraph GraphQL (APM, incidents, service map)
+│   ├── datadog_tool.py         # Official SDK v2 (incidents, monitors, logs)
+│   ├── evidence_normalizer.py  # Dual-source -> EvidenceBundle
+│   ├── testrail_tool.py        # READ + WRITE (cases, runs, sections)
+│   ├── ai_summarizer.py        # Jinja2 + local LLM summarization
+│   ├── test_generator.py       # AI test gen + LLM-as-judge scoring
+│   └── dependency_graph.py     # Service map blast radius
+├── pipeline/
+│   ├── orchestrator.py         # State machine driving all 7 steps
+│   └── stages.py               # Transition rules
+├── db/
+│   ├── rca_store.py            # SQLite audit trail
+│   └── review_store.py         # SQLite review queue + SLA
+└── api/
+    └── rca_pipeline.py         # FastAPI endpoints for all v2 tools
+```
+
+### TestRail Setup Checklist
+
+1. Find your suite ID: `GET /api/rca/testrail/suites`
+2. Create an "RCA Pipeline -- AI Generated" section in that suite
+3. Find the section ID: `GET /api/rca/testrail/sections/{suite_id}`
+4. Set in `.env`: `TESTRAIL_DEFAULT_SUITE_ID`, `TESTRAIL_RCA_SECTION_ID`
+5. Verify `custom_automation_type` field IDs match (0=None, 1=Automated, 2=To-be-automated)
+
+### Gap Closure Checklist (v2)
+
+| Gap | Status |
+|-----|--------|
+| Jira 90-day duplicate detection | Done |
+| New Relic pre-mitigation snapshot (NerdGraph) | Done |
+| New Relic service dependency map | Done |
+| Datadog incident ingestion | Done (NEW) |
+| Datadog monitor state capture | Done (NEW) |
+| Datadog error log fetch | Done (NEW) |
+| Dual-source normalization (EvidenceBundle) | Done (NEW) |
+| AI summarization with structured prompt | Done |
+| TestRail tiered matching (50/75/100) | Done |
+| TestRail write: create cases from AI output | Done (NEW) |
+| TestRail write: map to existing suite/section | Done (NEW) |
+| TestRail write: create verification run | Done (NEW) |
+| TestRail write: append to regression run | Done (NEW) |
+| Human review gate (24hr SLA) | Done |
+| Component blast radius (service map) | Done |
+| SQLite audit trail | Done |
+| Jira close with RCA artifact | Done |
+
+---
+
+## Patent-Worthy AI Innovation -- ZERO External APIs
 
 **Revolutionary approach**: This platform achieves enterprise-grade AI capabilities **without any external API dependencies** (no Claude, GPT-4, or cloud AI services). All AI/ML runs locally using state-of-the-art open-source models.
 
@@ -394,56 +561,77 @@ curl http://localhost:8000/health
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 paramount-media-ops-mcp/
 ├── mcp/                              # Core MCP Server Package
 │   ├── server.py                     # FastAPI MCP Server with endpoints
-│   ├── __init__.py                   # Package initialization
+│   │
+│   ├── api/                          # FastAPI Route Handlers
+│   │   ├── jira.py                   # JIRA production tracking
+│   │   ├── confluence.py             # Confluence runbooks
+│   │   ├── analytics.py              # Subscriber analytics
+│   │   ├── streaming.py              # Streaming QoE
+│   │   ├── ai.py                     # AI/ML service endpoints
+│   │   └── rca_pipeline.py           # v2: RCA pipeline endpoints (15+ routes)
+│   │
+│   ├── models/                       # v2: Pydantic Data Models
+│   │   ├── evidence_models.py        # EvidenceBundle, ServiceMapNode
+│   │   ├── rca_models.py             # RCARecord, PipelineStage, MatchConfidence
+│   │   └── review_queue.py           # ReviewItem, SLA enforcement
+│   │
+│   ├── tools/                        # v2: RCA Pipeline Tools
+│   │   ├── newrelic_tool.py          # NerdGraph GraphQL client
+│   │   ├── datadog_tool.py           # Official Datadog SDK v2
+│   │   ├── evidence_normalizer.py    # Dual-source -> EvidenceBundle
+│   │   ├── testrail_tool.py          # READ + WRITE path
+│   │   ├── ai_summarizer.py          # Jinja2 + local LLM
+│   │   ├── test_generator.py         # AI test gen + LLM-as-judge
+│   │   └── dependency_graph.py       # Blast radius analysis
+│   │
+│   ├── pipeline/                     # v2: State Machine Orchestrator
+│   │   ├── orchestrator.py           # 7-step pipeline
+│   │   └── stages.py                 # Transition rules
+│   │
+│   ├── db/                           # v2: SQLite Persistence
+│   │   ├── rca_store.py              # RCA audit trail
+│   │   └── review_store.py           # Review queue + SLA
+│   │
+│   ├── ai/                           # AI/ML Engines (v1)
+│   │   ├── rag_engine.py             # ChromaDB + sentence-transformers
+│   │   ├── nlp_engine.py             # spaCy + TextBlob
+│   │   ├── vision_engine.py          # CLIP + YOLOv8
+│   │   ├── voice_engine.py           # Whisper + Coqui TTS
+│   │   ├── bayesian_analytics.py     # PyMC inference
+│   │   ├── advanced_statistics.py    # ARIMA, VAR, survival
+│   │   ├── multi_agent_system.py     # AutoGen + CrewAI
+│   │   └── workflow_automation.py    # LangGraph state machines
 │   │
 │   ├── integrations/                 # External Service Connectors
-│   │   ├── jira_connector.py         # JIRA API for production issues
-│   │   ├── atlassian_client.py       # Atlassian wrapper (Jira + Confluence)
-│   │   ├── dynatrace_client.py       # Dynatrace Full-Stack Monitoring
-│   │   ├── newrelic_client.py        # NewRelic APM & Infrastructure
-│   │   ├── email_parser.py           # NLP complaint analysis
-│   │   ├── analytics_client.py       # Churn & subscriber analytics
-│   │   └── content_api.py            # Content catalog & ROI
+│   │   ├── atlassian_client.py       # Jira + Confluence
+│   │   ├── dynatrace_client.py       # Full-Stack Monitoring
+│   │   ├── newrelic_client.py        # NewRelic APM
+│   │   └── email_parser.py           # NLP complaint analysis
 │   │
 │   ├── resources/                    # 9 MCP Data Resources
-│   │   ├── churn_signals.py          # At-risk subscriber cohorts
-│   │   ├── complaints_topics.py      # NLP-clustered complaint themes
-│   │   ├── production_issues.py      # JIRA issue data with Pareto
-│   │   ├── content_catalog.py        # Content performance metrics
-│   │   ├── international_markets.py  # Regional market analysis
-│   │   ├── revenue_impact.py         # Financial correlations
-│   │   ├── retention_campaigns.py    # Campaign tracking
-│   │   ├── operational_efficiency.py # Production metrics
-│   │   └── pareto_analysis.py        # Cross-domain 80/20 analysis
-│   │
-│   ├── tools/                        # 5 LLM-Callable Tools
-│   │   ├── analyze_churn_root_cause.py
-│   │   ├── analyze_complaint_themes.py
-│   │   ├── analyze_production_risk.py
-│   │   ├── forecast_revenue_with_constraints.py
-│   │   └── generate_retention_campaign.py
-│   │
 │   ├── pareto/                       # Pareto Analysis Engine
-│   │   ├── pareto_calculator.py      # 80/20 decomposition
-│   │   └── pareto_insights.py        # Cross-functional insights
-│   │
+│   ├── utils/                        # Error handling + logging
 │   └── mocks/                        # Mock Data Generators
-│       ├── generate_churn_cohorts.py
-│       ├── generate_complaint_data.py
-│       ├── generate_content_catalog.py
-│       └── generate_production_issues.py
 │
+├── prompts/                          # v2: Jinja2 Prompt Templates
+│   ├── summarize_incident.j2
+│   ├── generate_test_cases.j2
+│   └── analyze_blast_radius.j2
+│
+├── data/                             # v2: Component maps + SQLite DBs
+│   └── component_map.json
+│
+├── dashboard/                        # React Frontend
+├── tests/                            # Test Suite
 ├── config.py                         # Environment-aware configuration
 ├── requirements.txt                  # Python dependencies
-├── pyproject.toml                    # Project metadata
-├── tests/                            # 55 automated tests
-└── docs/                             # Documentation
+└── .env.example                      # Environment template
 ```
 
 ---
@@ -547,16 +735,18 @@ Creates targeted retention campaigns for at-risk cohorts.
 
 ---
 
-### 🔌 Integrated Systems
+### Integrated Systems
 
 | Service | Category | Integration Mode |
 |---------|----------|------------------|
 | **Atlassian Jira** | Issue Tracking | Live/Hybrid API |
 | **Atlassian Confluence** | Runbooks | Live API |
+| **New Relic** | APM + NerdGraph GraphQL | Live/Mock API |
+| **Datadog** | Incidents + Monitors + Logs (v2 SDK) | Live/Mock API |
+| **TestRail** | Test Case Management (READ + WRITE) | Live API |
 | **Dynatrace** | Full-Stack Observability | Live/Mock API |
-| **NewRelic** | APM & Infrastructure | Live/Mock API |
 | **Adobe PDF Services** | Report Generation | Mock/Live API |
-| **Adobe Cloud Storage** | Asset Management | Mock/Live API |
+| **Local LLM (Ollama)** | Summarization + Test Gen | Local |
 
 ---
 
@@ -699,6 +889,20 @@ print(f"Top 20% causes {result.top_20_percent_contribution:.1%} of delays")
 | `/tools/{name}/execute` | POST | Execute a tool |
 | `/query` | POST | Unified MCP query |
 | `/execute` | POST | Unified MCP execute |
+| **RCA Pipeline v2** | | |
+| `/api/rca/pipeline/run` | POST | Execute full RCA pipeline |
+| `/api/rca/pipeline/{rca_id}` | GET | Get pipeline state |
+| `/api/rca/pipeline` | GET | List recent RCA records |
+| `/api/rca/evidence/capture` | POST | Pre-mitigation evidence capture |
+| `/api/rca/review/approve` | POST | Approve + write to TestRail |
+| `/api/rca/review/reject` | POST | Reject generated cases |
+| `/api/rca/review/pending` | GET | Pending review queue |
+| `/api/rca/testrail/suites` | GET | Browse TestRail suites |
+| `/api/rca/testrail/sections/{id}` | GET | Browse TestRail sections |
+| `/api/rca/datadog/incidents/{svc}` | GET | Datadog incidents |
+| `/api/rca/datadog/monitors/{svc}` | GET | Datadog monitors |
+| `/api/rca/newrelic/nrql` | POST | Run NRQL query |
+| `/api/rca/config/observability` | GET | Observability config |
 
 ---
 
@@ -915,14 +1119,28 @@ CONFLUENCE_SPACE_KEY=OPS
 DYNATRACE_ENVIRONMENT_URL=https://xxx.live.dynatrace.com
 DYNATRACE_API_TOKEN=your-token
 
-# NewRelic
+# NewRelic (NerdGraph)
 NEWRELIC_API_URL=https://api.newrelic.com/graphql
-NEWRELIC_API_KEY=your-key
-NEWRELIC_ACCOUNT_ID=your-account-id
+NEWRELIC_API_KEY=NRAK-xxxxxxxxxxxxxxxxxxxx
+NEWRELIC_ACCOUNT_ID=1234567
 
-# LLM (optional)
-ANTHROPIC_API_KEY=your-anthropic-key
-OPENAI_API_KEY=your-openai-key
+# Datadog (v2)
+DD_API_KEY=your-dd-api-key
+DD_APP_KEY=your-dd-app-key
+DD_SITE=datadoghq.com
+OBSERVABILITY_SOURCE=both  # newrelic | datadog | both
+
+# TestRail (full write path)
+TESTRAIL_URL=https://yourorg.testrail.io
+TESTRAIL_EMAIL=your-email
+TESTRAIL_API_KEY=your-testrail-key
+TESTRAIL_PROJECT_ID=1
+TESTRAIL_DEFAULT_SUITE_ID=10
+TESTRAIL_RCA_SECTION_ID=42
+
+# Local LLM (patent-safe, optional)
+# LOCAL_LLM_URL=http://localhost:11434/api/generate
+# LOCAL_LLM_MODEL=llama3
 ```
 
 ### Environment Presets
@@ -960,7 +1178,7 @@ See [SECURITY.md](./SECURITY.md) for details.
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [x] MCP Server with 9 resources, 5 tools
 - [x] Pareto Analysis Engine
@@ -969,9 +1187,18 @@ See [SECURITY.md](./SECURITY.md) for details.
 - [x] AI Package (Predictive + Anomaly + Insights)
 - [x] React Dashboard with live/mock toggles
 - [x] One-click Startup/Stop scripts
+- [x] **v2: RCA Pipeline with dual-source evidence capture**
+- [x] **v2: New Relic NerdGraph GraphQL integration**
+- [x] **v2: Datadog official SDK (incidents, monitors, logs)**
+- [x] **v2: Unified EvidenceBundle normalization**
+- [x] **v2: TestRail full WRITE path (create cases, runs, refs)**
+- [x] **v2: AI test generation with LLM-as-judge scoring**
+- [x] **v2: Human review gate with 24hr SLA enforcement**
+- [x] **v2: Service map blast radius analysis**
+- [x] **v2: SQLite audit trail + review queue**
+- [x] **v2: Jinja2 structured prompt templates**
 - [ ] Real-time streaming data pipeline
-- [ ] Advanced ML churn prediction models
-- [ ] Automated remediation workflow (Self-healing)
+- [ ] CI/CD integration for automated regression triggers
 
 ---
 

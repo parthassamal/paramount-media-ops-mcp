@@ -37,7 +37,7 @@ from mcp.tools import (
     create_forecast_revenue,
     create_generate_campaign
 )
-from mcp.api import jira_router, confluence_router, analytics_router, streaming_router, figma_router, adobe_router, ai_router
+from mcp.api import jira_router, confluence_router, analytics_router, streaming_router, figma_router, adobe_router, ai_router, rca_router
 
 # Configure structured logging
 structlog.configure(
@@ -328,10 +328,32 @@ Generic MCP endpoints for resource queries and tool execution.
         {
             "name": "figma",
             "description": """
-**🎨 Figma Design System Integration**
+**Figma Design System Integration**
 
 Live synchronization with Figma for design tokens, CSS variables, and asset exports.
 Enables real-time dashboard styling updates from Figma designs.
+            """
+        },
+        {
+            "name": "RCA Pipeline",
+            "description": """
+**Root Cause Analysis Pipeline (v2)**
+
+End-to-end production incident analysis:
+- Dual-source evidence capture (New Relic NerdGraph + Datadog SDK)
+- AI-powered incident summarization (Jinja2 + local LLM)
+- TestRail tiered matching (50/75/100% thresholds)
+- AI test case generation with LLM-as-judge scoring
+- Human review gate with 24hr SLA enforcement
+- TestRail WRITE: create cases, verification runs, regression appendages
+- Service map blast radius analysis
+- Jira close-out with full RCA artifact
+
+**Key Endpoints:**
+- `POST /api/rca/pipeline/run` - Execute full pipeline
+- `POST /api/rca/evidence/capture` - Pre-mitigation evidence snapshot
+- `POST /api/rca/review/approve` - Human gate + TestRail write
+- `GET /api/rca/review/pending` - Review queue with SLA tracking
             """
         }
     ]
@@ -359,6 +381,7 @@ app.include_router(streaming_router)
 app.include_router(figma_router)
 app.include_router(adobe_router)
 app.include_router(ai_router)  # Patent-worthy AI services
+app.include_router(rca_router)  # RCA Pipeline v2
 
 # Custom Swagger UI with styling
 @app.get("/docs", include_in_schema=False)
@@ -508,14 +531,22 @@ async def health_check():
                 "confluence": settings.atlassian_enabled,
                 "conviva": settings.conviva_enabled,
                 "newrelic": settings.newrelic_enabled,
+                "datadog": settings.datadog_enabled,
+                "testrail": settings.testrail_enabled,
                 "analytics": settings.analytics_enabled,
                 "figma": settings.figma_enabled
+            },
+            "rca_pipeline": {
+                "observability_source": settings.observability_source,
+                "review_sla_hours": settings.rca_review_sla_hours,
+                "local_llm": bool(settings.local_llm_url)
             },
             "api_endpoints": {
                 "jira": "/api/jira",
                 "confluence": "/api/confluence",
                 "analytics": "/api/analytics",
-                "streaming": "/api/streaming"
+                "streaming": "/api/streaming",
+                "rca_pipeline": "/api/rca"
             },
             "timestamp": datetime.now().isoformat()
         }

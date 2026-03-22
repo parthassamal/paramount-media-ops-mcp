@@ -7,6 +7,7 @@ from mcp.api.streaming import router as streaming_router
 from mcp.api.figma import router as figma_router
 from mcp.api.adobe_exports import router as adobe_router
 from mcp.api.ai import router as ai_router
+from mcp.api.rca_pipeline import router as rca_router
 
 __all__ = [
     "jira_router",
@@ -15,7 +16,8 @@ __all__ = [
     "streaming_router",
     "figma_router",
     "adobe_router",
-    "ai_router"
+    "ai_router",
+    "rca_router"
 ]
 
 

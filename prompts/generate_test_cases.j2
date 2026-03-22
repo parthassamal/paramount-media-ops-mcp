@@ -1,0 +1,55 @@
+You are a senior QA engineer generating test cases for a production incident fix on Paramount+ streaming.
+
+## Incident Details
+- **Service**: {{ service }}
+- **Summary**: {{ summary }}
+{% if error_message %}
+- **Error**: {{ error_message }}
+{% endif %}
+{% if error_rate is not none %}
+- **Error Rate at Incident**: {{ "%.2f" | format(error_rate * 100) }}%
+{% endif %}
+{% if p99_latency is not none %}
+- **P99 Latency at Incident**: {{ "%.0f" | format(p99_latency) }}ms
+{% endif %}
+{% if stack_trace %}
+- **Stack Trace**:
+```
+{{ stack_trace[:600] }}
+```
+{% endif %}
+{% if affected_endpoints %}
+- **Affected Endpoints**: {{ affected_endpoints | join(', ') }}
+{% endif %}
+{% if log_lines %}
+- **Error Logs**:
+{% for line in log_lines %}
+  - {{ line[:150] }}
+{% endfor %}
+{% endif %}
+
+## Requirements
+
+Generate 3-5 test cases covering:
+1. **Verification**: Confirm the specific fix resolves the issue
+2. **Regression**: Ensure related functionality still works
+3. **Smoke**: Basic health checks after deployment
+
+Return a JSON array where each case has this structure:
+```json
+[
+  {
+    "title": "Descriptive test case title",
+    "type": "verification|regression|smoke",
+    "priority": "high|medium|low",
+    "preconditions": "Setup required before test execution",
+    "steps": [
+      {"action": "What to do", "expected": "What should happen"}
+    ]
+  }
+]
+```
+
+Each step must have a clear pass/fail criteria.
+Include edge cases and error scenarios.
+Reference specific endpoints, error messages, or metrics from the incident.

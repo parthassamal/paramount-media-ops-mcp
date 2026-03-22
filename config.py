@@ -357,6 +357,49 @@ class Settings(BaseSettings):
     )
     
     # ==========================================================================
+    # Datadog Configuration
+    # Incident Management, Monitors, APM traces, Logs
+    # ==========================================================================
+    datadog_enabled: bool = False
+    dd_api_key: str = Field(default="", description="Datadog API key")
+    dd_app_key: str = Field(default="", description="Datadog Application key")
+    dd_site: str = Field(default="datadoghq.com", description="Datadog site (datadoghq.com, datadoghq.eu, etc.)")
+    
+    # ==========================================================================
+    # Observability Source Toggle
+    # Controls which observability backend to query for evidence
+    # ==========================================================================
+    observability_source: Literal["newrelic", "datadog", "both"] = "both"
+    
+    # ==========================================================================
+    # TestRail Configuration
+    # Test case management and regression tracking
+    # ==========================================================================
+    testrail_enabled: bool = False
+    testrail_url: str = Field(default="", description="TestRail instance URL (e.g., https://yourorg.testrail.io)")
+    testrail_email: str = Field(default="", description="TestRail user email")
+    testrail_api_key: str = Field(default="", description="TestRail API key")
+    testrail_project_id: int = Field(default=0, description="TestRail project ID")
+    testrail_default_suite_id: int = Field(default=0, description="Default suite for regression cases")
+    testrail_rca_section_id: int = Field(default=0, description="Section for AI-generated RCA cases")
+    
+    # ==========================================================================
+    # Local LLM Configuration (patent-safe, no external API key required)
+    # ==========================================================================
+    local_llm_url: Optional[str] = Field(
+        default=None,
+        description="Local LLM endpoint (e.g., http://localhost:11434/api/generate for Ollama)"
+    )
+    local_llm_model: str = Field(default="llama3", description="Local LLM model name")
+    
+    # ==========================================================================
+    # RCA Pipeline Configuration
+    # ==========================================================================
+    rca_duplicate_window_days: int = Field(default=90, description="Window for duplicate detection")
+    rca_review_sla_hours: int = Field(default=24, description="Human review SLA in hours")
+    rca_auto_execute_threshold: float = Field(default=0.85, description="Auto-execute confidence threshold")
+    
+    # ==========================================================================
     # Data Configuration
     # ==========================================================================
     random_seed: int = 42

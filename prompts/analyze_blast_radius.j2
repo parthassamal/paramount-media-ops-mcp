@@ -1,0 +1,44 @@
+You are a site reliability engineer analyzing the blast radius of a production incident.
+
+## Primary Service
+**{{ service_name }}**
+
+## Service Dependency Map
+{% if service_map %}
+{% for node in service_map %}
+- **{{ node.service_name }}**
+  {% if node.upstream_of %}- Upstream of: {{ node.upstream_of | join(', ') }}{% endif %}
+  {% if node.downstream_of %}- Downstream of: {{ node.downstream_of | join(', ') }}{% endif %}
+  {% if node.criticality %}- Criticality: {{ node.criticality }}{% endif %}
+{% endfor %}
+{% else %}
+No service map data available.
+{% endif %}
+
+## Affected Endpoints
+{% if affected_endpoints %}
+{% for ep in affected_endpoints %}
+- {{ ep }}
+{% endfor %}
+{% else %}
+No specific endpoints identified.
+{% endif %}
+
+## Instructions
+
+Analyze the blast radius and return a JSON object:
+```json
+{
+  "primary_service": "{{ service_name }}",
+  "upstream_services": ["services that feed into {{ service_name }}"],
+  "downstream_services": ["services that {{ service_name }} calls"],
+  "all_affected": ["complete list of potentially impacted services"],
+  "total_blast_radius": 0,
+  "risk_level": "critical|high|moderate|low",
+  "recommended_test_scope": {
+    "smoke": ["services needing smoke tests"],
+    "regression": ["services needing full regression"],
+    "monitoring": ["services to watch closely post-fix"]
+  }
+}
+```

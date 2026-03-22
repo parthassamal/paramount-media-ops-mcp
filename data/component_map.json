@@ -1,0 +1,58 @@
+{
+  "auth-service": {
+    "upstream": ["api-gateway", "web-frontend", "mobile-app"],
+    "downstream": ["user-db", "session-cache", "audit-log"],
+    "dependencies": ["user-db", "session-cache", "audit-log", "api-gateway"],
+    "smoke_suite_id": 101,
+    "regression_suite_id": 201
+  },
+  "streaming-service": {
+    "upstream": ["api-gateway", "cdn-edge"],
+    "downstream": ["drm-service", "content-catalog", "analytics-pipeline"],
+    "dependencies": ["drm-service", "content-catalog", "analytics-pipeline", "cdn-edge", "transcoding"],
+    "smoke_suite_id": 102,
+    "regression_suite_id": 202
+  },
+  "content-catalog": {
+    "upstream": ["streaming-service", "search-service", "recommendation-engine"],
+    "downstream": ["metadata-db", "asset-store", "thumbnail-service"],
+    "dependencies": ["metadata-db", "asset-store", "thumbnail-service"],
+    "smoke_suite_id": 103,
+    "regression_suite_id": 203
+  },
+  "payment-service": {
+    "upstream": ["web-frontend", "mobile-app", "subscription-manager"],
+    "downstream": ["payment-gateway", "billing-db", "notification-service"],
+    "dependencies": ["payment-gateway", "billing-db", "notification-service", "fraud-detection"],
+    "smoke_suite_id": 104,
+    "regression_suite_id": 204
+  },
+  "recommendation-engine": {
+    "upstream": ["api-gateway", "web-frontend"],
+    "downstream": ["user-profile-service", "content-catalog", "ml-model-service"],
+    "dependencies": ["user-profile-service", "content-catalog", "ml-model-service", "feature-store"],
+    "smoke_suite_id": 105,
+    "regression_suite_id": 205
+  },
+  "api-gateway": {
+    "upstream": ["cdn-edge", "load-balancer"],
+    "downstream": ["auth-service", "streaming-service", "content-catalog", "payment-service"],
+    "dependencies": ["auth-service", "streaming-service", "content-catalog", "payment-service", "rate-limiter"],
+    "smoke_suite_id": 100,
+    "regression_suite_id": 200
+  },
+  "notification-service": {
+    "upstream": ["payment-service", "subscription-manager", "content-catalog"],
+    "downstream": ["email-provider", "push-provider", "sms-provider"],
+    "dependencies": ["email-provider", "push-provider", "sms-provider", "template-engine"],
+    "smoke_suite_id": 106,
+    "regression_suite_id": 206
+  },
+  "drm-service": {
+    "upstream": ["streaming-service"],
+    "downstream": ["license-server", "key-store"],
+    "dependencies": ["license-server", "key-store"],
+    "smoke_suite_id": 107,
+    "regression_suite_id": 207
+  }
+}
