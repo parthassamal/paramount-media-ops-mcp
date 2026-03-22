@@ -11,7 +11,7 @@ Auth: DD_API_KEY and DD_APP_KEY auto-detected from environment variables.
 """
 
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from datetime import datetime, timedelta
 
 from config import settings

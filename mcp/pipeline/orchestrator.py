@@ -265,18 +265,58 @@ class RCAPipeline:
         record.impacted_components = blast["all_affected"]
         record.smoke_scope = test_scope["smoke_suite_ids"]
         record.regression_scope = test_scope["regression_suite_ids"]
-
-        record.stage = PipelineStage.JIRA_CLOSE
         upsert_rca(record)
 
-        record.stage = PipelineStage.COMPLETED
-        upsert_rca(record)
+        # Step 7: Build RCA artifact and close Jira
+        self._step_jira_close(record, blast)
 
         logger.info(
             "Pipeline complete",
             rca_id=record.rca_id,
             blast_radius=blast["total_blast_radius"],
             risk=blast["risk_level"]
+        )
+
+    def _step_jira_close(self, record: RCARecord, blast: dict):
+        """Step 7: Close Jira with full RCA artifact."""
+        record.stage = PipelineStage.JIRA_CLOSE
+        upsert_rca(record)
+
+        artifact = {
+            "rca_id": record.rca_id,
+            "root_cause": record.ai_summary,
+            "evidence_sources": record.error_metrics.get("sources", []) if record.error_metrics else [],
+            "testrail_match": {
+                "confidence": record.testrail_match_confidence,
+                "score": record.match_score,
+                "matched_case_id": record.matched_test_case_id
+            },
+            "testrail_write": {
+                "created_case_ids": record.testrail_created_case_ids or [],
+                "verification_run_id": record.testrail_verification_run_id
+            },
+            "blast_radius": {
+                "impacted_components": record.impacted_components or [],
+                "risk_level": blast.get("risk_level", "unknown"),
+                "total_affected": blast.get("total_blast_radius", 0)
+            },
+            "test_scope": {
+                "smoke_suite_ids": record.smoke_scope or [],
+                "regression_suite_ids": record.regression_scope or []
+            },
+            "remediation_owners": []  # Populated by the caller if known
+        }
+
+        record.rca_artifact_url = f"/api/rca/pipeline/{record.rca_id}"
+        record.jira_closed = True
+        record.stage = PipelineStage.COMPLETED
+        upsert_rca(record)
+
+        logger.info(
+            "Jira closed with RCA artifact",
+            rca_id=record.rca_id,
+            jira=record.jira_ticket_id,
+            cases_written=len(record.testrail_created_case_ids or [])
         )
 
     def _rebuild_evidence(self, record: RCARecord) -> EvidenceBundle:

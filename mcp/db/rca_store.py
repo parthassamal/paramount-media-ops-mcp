@@ -5,7 +5,6 @@ Every stage transition is persisted for traceability.
 Uses a single table with JSON columns for complex fields.
 """
 
-import json
 import sqlite3
 from typing import Optional, List
 from datetime import datetime

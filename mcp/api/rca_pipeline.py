@@ -10,7 +10,7 @@ Exposes the full pipeline:
 - Review queue management
 """
 
-from typing import Dict, Any, List, Optional
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
@@ -23,12 +23,9 @@ from mcp.tools.datadog_tool import (
 from mcp.tools.evidence_normalizer import normalize_evidence
 from mcp.tools.testrail_tool import get_suites, get_sections
 from mcp.db.rca_store import get_rca, get_recent_rcas, get_rcas_by_stage
-from mcp.db.review_store import (
-    get_pending_reviews, approve_review, reject_review, get_review_by_rca
-)
+from mcp.db.review_store import get_pending_reviews, reject_review
 from mcp.models.rca_models import PipelineStage
 from mcp.utils.logger import get_logger
-from mcp.utils.error_handler import ServiceError, ValidationError
 
 logger = get_logger(__name__)
 
@@ -298,4 +295,64 @@ async def get_observability_config():
         "datadog_configured": bool(settings.dd_api_key and settings.dd_app_key),
         "testrail_configured": bool(settings.testrail_url and settings.testrail_api_key),
         "local_llm_configured": bool(settings.local_llm_url)
+    }
+
+
+# =============================================================================
+# RCA Artifact (Step 7 output)
+# =============================================================================
+
+@router.get("/artifact/{rca_id}", summary="Get full RCA artifact for Jira close-out")
+async def get_rca_artifact(rca_id: str):
+    """
+    Returns the complete RCA artifact -- the structured payload
+    that gets attached to the Jira ticket when the pipeline closes it.
+
+    Includes: root cause, evidence sources, TestRail case/run IDs,
+    blast radius, test scope, and remediation owners.
+    """
+    record = get_rca(rca_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"RCA {rca_id} not found")
+
+    return {
+        "rca_id": record.rca_id,
+        "jira_ticket_id": record.jira_ticket_id,
+        "stage": record.stage.value,
+        "jira_closed": record.jira_closed,
+        "root_cause_summary": record.ai_summary,
+        "evidence": {
+            "bundle_id": record.evidence_bundle_id,
+            "sources": record.error_metrics.get("sources", []) if record.error_metrics else [],
+            "error_rate": record.error_metrics.get("error_rate") if record.error_metrics else None,
+            "p99_latency_ms": record.error_metrics.get("p99_latency_ms") if record.error_metrics else None,
+            "stack_trace_available": bool(record.stack_trace)
+        },
+        "testrail_match": {
+            "confidence": record.testrail_match_confidence,
+            "score": record.match_score,
+            "matched_case_id": record.matched_test_case_id,
+            "automation_covered": record.automation_covered,
+            "automation_gap_reason": record.automation_gap_reason
+        },
+        "testrail_write": {
+            "created_case_ids": record.testrail_created_case_ids or [],
+            "verification_run_id": record.testrail_verification_run_id,
+            "regression_run_id": record.regression_run_id
+        },
+        "blast_radius": {
+            "impacted_components": record.impacted_components or [],
+            "smoke_scope": record.smoke_scope or [],
+            "regression_scope": record.regression_scope or []
+        },
+        "review": {
+            "reviewer_id": record.reviewer_id,
+            "approved_at": record.human_review_approved_at.isoformat() if record.human_review_approved_at else None,
+            "notes": record.review_notes
+        },
+        "duplicate_detection": {
+            "is_duplicate": record.is_duplicate,
+            "duplicate_of": record.duplicate_of,
+            "severity_escalated": record.severity_escalated
+        }
     }
