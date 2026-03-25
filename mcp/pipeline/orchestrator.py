@@ -278,7 +278,10 @@ class RCAPipeline:
         )
 
     def _step_jira_close(self, record: RCARecord, blast: dict):
-        """Step 7: Close Jira with full RCA artifact."""
+        """Step 7: Close Jira with full RCA artifact, transition ticket, and add comment."""
+        import json as _json
+        import httpx
+
         record.stage = PipelineStage.JIRA_CLOSE
         upsert_rca(record)
 
@@ -304,10 +307,71 @@ class RCAPipeline:
                 "smoke_suite_ids": record.smoke_scope or [],
                 "regression_suite_ids": record.regression_scope or []
             },
-            "remediation_owners": []  # Populated by the caller if known
+            "remediation_owners": []
         }
 
         record.rca_artifact_url = f"/api/rca/pipeline/{record.rca_id}"
+
+        jira_key = record.jira_ticket_id
+        jira_url = settings.jira_api_url.rstrip("/")
+        jira_email = settings.jira_api_email
+        jira_token = settings.jira_api_token
+
+        if jira_key and jira_url and jira_email and jira_token:
+            auth = (jira_email, jira_token)
+            headers = {"Accept": "application/json", "Content-Type": "application/json"}
+
+            comment_body = (
+                f"*RCA Pipeline Complete* ({record.rca_id})\n\n"
+                f"*Root Cause:* {record.ai_summary or 'N/A'}\n"
+                f"*Blast Radius:* {blast.get('risk_level', 'unknown')} "
+                f"({blast.get('total_blast_radius', 0)} components affected)\n"
+                f"*TestRail Cases Created:* {len(record.testrail_created_case_ids or [])}\n"
+                f"*Verification Run:* {record.testrail_verification_run_id or 'N/A'}\n\n"
+                f"Full artifact: {record.rca_artifact_url}"
+            )
+
+            try:
+                with httpx.Client(timeout=15.0) as client:
+                    client.post(
+                        f"{jira_url}/rest/api/3/issue/{jira_key}/comment",
+                        auth=auth,
+                        headers=headers,
+                        json={
+                            "body": {
+                                "type": "doc", "version": 1,
+                                "content": [{"type": "paragraph", "content": [{"type": "text", "text": comment_body}]}]
+                            }
+                        },
+                    )
+                    logger.info("jira_rca_comment_added", jira=jira_key)
+            except Exception as e:
+                logger.warning("jira_comment_failed", jira=jira_key, error=str(e))
+
+            try:
+                with httpx.Client(timeout=15.0) as client:
+                    trans_resp = client.get(
+                        f"{jira_url}/rest/api/3/issue/{jira_key}/transitions",
+                        auth=auth, headers=headers,
+                    )
+                    trans_resp.raise_for_status()
+                    transitions = trans_resp.json().get("transitions", [])
+                    done_transition = next(
+                        (t for t in transitions if t["name"].lower() in ("done", "resolved", "closed", "complete")),
+                        None,
+                    )
+                    if done_transition:
+                        client.post(
+                            f"{jira_url}/rest/api/3/issue/{jira_key}/transitions",
+                            auth=auth, headers=headers,
+                            json={"transition": {"id": done_transition["id"]}},
+                        )
+                        logger.info("jira_transitioned", jira=jira_key, to=done_transition["name"])
+                    else:
+                        logger.warning("jira_no_done_transition", jira=jira_key, available=[t["name"] for t in transitions])
+            except Exception as e:
+                logger.warning("jira_transition_failed", jira=jira_key, error=str(e))
+
         record.jira_closed = True
         record.stage = PipelineStage.COMPLETED
         upsert_rca(record)

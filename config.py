@@ -39,7 +39,13 @@ class Settings(BaseSettings):
     log_format: Literal["json", "text"] = "json"
     
     # Mock Mode - when True, uses generated data instead of real APIs
-    mock_mode: bool = True
+    mock_mode: bool = False
+    
+    # API Authentication -- set to a secret string to require X-API-Key header
+    api_secret_key: str = Field(default="", description="API key for endpoint authentication. Empty = open access.")
+    
+    # CORS allowed origins (comma-separated). Empty = default behaviour.
+    allowed_origins: str = Field(default="", description="Comma-separated allowed CORS origins. Empty = default.")
     
     # ==========================================================================
     # JIRA Configuration
@@ -473,7 +479,7 @@ class Settings(BaseSettings):
 class DevelopmentSettings(Settings):
     """Development environment defaults."""
     environment: Literal["development", "staging", "production"] = "development"
-    mock_mode: bool = True
+    mock_mode: bool = False
     log_level: str = "DEBUG"
     log_format: Literal["json", "text"] = "text"
 

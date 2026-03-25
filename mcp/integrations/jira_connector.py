@@ -287,23 +287,18 @@ class JiraConnector:
         limit: int = 100
     ) -> List[Dict[str, Any]]:
         """
-        Fetch production issues from JIRA.
-        
-        Args:
-            project: Project key (default: from settings)
-            status: Filter by status (e.g., ["Open", "In Progress"])
-            severity: Filter by severity (e.g., "critical", "high")
-            show_name: Filter by show name
-            days_since_created: Filter issues created in last N days
-            limit: Maximum number of issues to return
-        
-        Returns:
-            List of production issue dictionaries
+        Fetch production issues from JIRA with TTL caching.
         """
         if self.mock_mode:
             return self._get_mock_issues(status, severity, show_name, days_since_created, limit)
-        
-        return self._fetch_from_jira_sync(
+
+        from mcp.utils.cache import get_cached, set_cached
+        cache_key = f"jira_issues:{project}:{status}:{severity}:{show_name}:{days_since_created}:{limit}"
+        cached = get_cached(cache_key, ttl_seconds=30.0)
+        if cached is not None:
+            return cached
+
+        result = self._fetch_from_jira_sync(
             project or self.project_key,
             status,
             severity,
@@ -311,6 +306,8 @@ class JiraConnector:
             days_since_created,
             limit
         )
+        set_cached(cache_key, result)
+        return result
     
     def _get_mock_issues(
         self,

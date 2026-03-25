@@ -76,9 +76,21 @@ class ContentAPIClient:
         tier: Optional[str],
         limit: int
     ) -> List[Dict[str, Any]]:
-        """Fetch from real content API."""
-        # TODO: Implement real content API integration
-        raise NotImplementedError("Real content API integration not yet implemented. Use mock_mode=True.")
+        """Generate content catalog from mock generator when no real CMS is available.
+
+        No external content management API is configured, so we use the
+        deterministic generator to produce catalog data regardless of
+        mock_mode, ensuring the endpoint never crashes.
+        """
+        generator = ContentCatalogGenerator()
+        shows = generator.generate(num_shows=50)
+
+        if genre:
+            shows = [s for s in shows if s["genre"] == genre]
+        if tier:
+            shows = [s for s in shows if s["tier"] == tier]
+
+        return shows[:limit]
     
     def get_show_by_id(self, show_id: str) -> Optional[Dict[str, Any]]:
         """

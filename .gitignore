@@ -70,3 +70,14 @@ temp/
 
 # Sample data directory
 !sample_data/
+
+# Node
+node_modules/
+dashboard/node_modules/
+
+# SQLite databases
+*.db
+
+# Reports
+reports/*.pdf
+

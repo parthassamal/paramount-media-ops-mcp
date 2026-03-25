@@ -9,6 +9,7 @@ import { Moon, Sun, Download, Wifi, Palette } from "lucide-react";
 import { ImageWithFallback } from "./components/figma/ImageWithFallback";
 import paramountLogo from "../assets/3f3a14d838a1424580296a3c04cfff3bf623a992.png";
 import ErrorBoundary from "../utils/ErrorBoundary";
+import { API_BASE } from "../config/api";
 
 function AppContent() {
   const [darkMode, setDarkMode] = useState(true);
@@ -21,7 +22,7 @@ function AppContent() {
     const fetchFigmaAssets = async () => {
       try {
         // 1. Fetch CSS Variables
-        const cssResponse = await fetch('http://localhost:8000/figma/css-variables');
+        const cssResponse = await fetch(`${API_BASE}/figma/css-variables`);
         if (cssResponse.ok) {
           const { css } = await cssResponse.json();
           let styleTag = document.getElementById('figma-live-styles');
@@ -35,7 +36,7 @@ function AppContent() {
         }
 
         // 2. Fetch Hero Image from configured node ID
-        const imgResponse = await fetch('http://localhost:8000/figma/images');
+        const imgResponse = await fetch(`${API_BASE}/figma/images`);
         if (imgResponse.ok) {
           const { images } = await imgResponse.json();
           const heroUrl = Object.values(images)[0] as string;
@@ -65,60 +66,71 @@ function AppContent() {
 
   const handleExportPDF = async () => {
     try {
-      // Gather real dashboard data
+      const [healthRes, issuesRes] = await Promise.all([
+        fetch(`${API_BASE}/health`),
+        fetch(`${API_BASE}/api/jira/issues`),
+      ]);
+
+      const health = healthRes.ok ? await healthRes.json() : {};
+      const issues = issuesRes.ok ? await issuesRes.json() : [];
+
+      const liveIntegrations = health.integrations
+        ? Object.values(health.integrations).filter((i: any) => i?.status === "live").length
+        : 0;
+      const totalIssues = issues.length;
+      const criticalIssues = issues.filter(
+        (i: any) => i.severity === "critical" || /\bP1\b/i.test(i.summary)
+      ).length;
+      const highIssues = issues.filter(
+        (i: any) => i.severity === "high" || /\bP2\b/i.test(i.summary)
+      ).length;
+
       const dashboardSnapshot = {
         metrics: {
-          "Total Subscribers": "67.5M",
-          "Annual Revenue": "$10.2B", 
-          "Monthly Churn Rate": "4.7%",
+          "Total Production Issues": String(totalIssues),
+          "Critical Issues": String(criticalIssues),
+          "High Priority Issues": String(highIssues),
+          "Live Integrations": String(liveIntegrations),
           "Avg Resolution Time": "1.2h",
-          "At-Risk Subscribers": "3.2M",
-          "Revenue at Risk": "$2.1M"
+          "Revenue at Risk": `$${(criticalIssues * 500000 + highIssues * 200000).toLocaleString()}`,
         },
-        insights: [
-          "Top 20% of issues drive 77% of operational impact (Pareto validated)",
-          "AI-powered predictions reduce Mean Time to Resolution (MTTR) by 50%",
-          "Churn prevention campaigns save $20M annually",
-          "International content gaps account for 42% of churn risk",
-          "Reality TV shows have the highest subscriber retention (87%)"
-        ],
+        insights: issues.slice(0, 5).map(
+          (i: any) => `[${i.key}] ${i.summary} (${i.status})`
+        ),
         recommendations: [
-          "Focus retention efforts on international markets (125K subscribers at risk)",
-          "Launch price-sensitive ad-supported tier to reduce churn",
-          "Implement automated remediation for top 5 production issues",
-          "Expand Reality TV content library by 30%",
-          "Deploy AI anomaly detection across all streaming regions"
+          criticalIssues > 0
+            ? `Immediate attention needed for ${criticalIssues} critical issue(s)`
+            : "No critical issues - maintain current monitoring",
+          `${liveIntegrations} integrations connected and reporting live data`,
+          "Run RCA pipeline on unresolved critical issues for root cause analysis",
+          "Review Pareto analysis to prioritize the top 20% of issues driving 80% of impact",
+          "Schedule regression test runs via TestRail for recently resolved issues",
         ],
         timestamp: new Date().toISOString(),
         figma_sync: isFigmaLive,
-        figma_image_url: figmaHeroImage || null
+        figma_image_url: figmaHeroImage || null,
       };
 
-      const response = await fetch('http://localhost:8000/adobe/export-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(`${API_BASE}/adobe/export-report`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          report_type: 'executive',
+          report_type: "executive",
           data: dashboardSnapshot,
-          upload_to_cloud: false
-        })
+          upload_to_cloud: false,
+        }),
       });
 
       if (response.ok) {
         const result = await response.json();
-        const filename = result.filename;
-        
-        // Trigger actual download from the backend
-        window.location.href = `http://localhost:8000/adobe/download-report/${filename}`;
-        
-        console.log(`✅ PDF Report Generated: ${filename}`);
+        window.location.href = `${API_BASE}/adobe/download-report/${result.filename}`;
       } else {
         const error = await response.json();
-        alert(`❌ Export Failed: ${error.detail || 'Unknown error'}`);
+        alert(`Export Failed: ${error.detail || "Unknown error"}`);
       }
     } catch (error) {
-      console.error('Export error:', error);
-      alert('❌ Connection error to PDF service');
+      console.error("Export error:", error);
+      alert("Connection error to PDF service");
     }
   };
 

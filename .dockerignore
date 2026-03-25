@@ -1,0 +1,12 @@
+node_modules
+venv
+__pycache__
+*.pyc
+.env
+.git
+.github
+*.db
+reports/*.pdf
+dashboard/node_modules
+dashboard/dist
+.cursor

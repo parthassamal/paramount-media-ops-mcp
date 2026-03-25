@@ -722,7 +722,7 @@ class NewRelicClient:
         priority: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Get active incidents and alerts.
+        Get active incidents and alerts via NerdGraph aiIssues query.
         
         Args:
             status: Incident status (open, closed, all)
@@ -733,9 +733,158 @@ class NewRelicClient:
         """
         if self.mock_mode:
             return self._get_mock_incidents(status, priority)
-        
-        # Real implementation would use NewRelic Alerts API
-        return self._get_mock_incidents(status, priority)
+
+        return self._fetch_live_incidents(status, priority)
+
+    def _fetch_live_incidents(
+        self,
+        status: str,
+        priority: Optional[str]
+    ) -> Dict[str, Any]:
+        """Fetch real incidents from NerdGraph."""
+        import asyncio
+
+        nr_filter = "ACTIVATED" if status == "open" else "DEACTIVATED" if status == "closed" else ""
+        filter_clause = f', filter: {{ state: {nr_filter} }}' if nr_filter else ""
+
+        query = """
+        {
+          actor {
+            account(id: %s) {
+              aiIssues {
+                issues(timeWindow: { endTime: 0, startTime: 604800 }%s) {
+                  issues {
+                    issueId
+                    title
+                    priority
+                    state
+                    activatedAt
+                    closedAt
+                    sources
+                    totalIncidents
+                  }
+                }
+              }
+            }
+          }
+        }
+        """ % (self.account_id, filter_clause)
+
+        try:
+            result = asyncio.get_event_loop().run_until_complete(
+                self._graphql_request(query)
+            ) if asyncio.get_event_loop().is_running() is False else self._sync_graphql_request(query)
+        except RuntimeError:
+            result = self._sync_graphql_request(query)
+        except Exception as e:
+            logger.warning("newrelic_incidents_nerdgraph_failed", error=str(e))
+            return self._fetch_incidents_via_nrql(status, priority)
+
+        try:
+            issues_data = result.get("actor", {}).get("account", {}).get("aiIssues", {}).get("issues", {}).get("issues", [])
+        except (AttributeError, TypeError):
+            logger.warning("newrelic_incidents_parse_failed, falling back to NRQL")
+            return self._fetch_incidents_via_nrql(status, priority)
+
+        if not issues_data:
+            return self._fetch_incidents_via_nrql(status, priority)
+
+        priority_map = {"CRITICAL": "critical", "HIGH": "high", "MEDIUM": "medium", "LOW": "low"}
+        incidents = []
+        for issue in issues_data:
+            nr_priority = priority_map.get(str(issue.get("priority", "")).upper(), "medium")
+            if priority and nr_priority != priority:
+                continue
+            incidents.append({
+                "id": issue.get("issueId", ""),
+                "title": issue.get("title", "Unknown Issue"),
+                "priority": nr_priority,
+                "status": "open" if issue.get("state") == "ACTIVATED" else "closed",
+                "service": (issue.get("sources") or ["unknown"])[0] if issue.get("sources") else "unknown",
+                "opened_at": issue.get("activatedAt", ""),
+                "duration_minutes": 0
+            })
+
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "total_incidents": len(incidents),
+            "by_priority": {
+                "critical": len([i for i in incidents if i["priority"] == "critical"]),
+                "high": len([i for i in incidents if i["priority"] == "high"]),
+                "medium": len([i for i in incidents if i["priority"] == "medium"]),
+                "low": len([i for i in incidents if i["priority"] == "low"])
+            },
+            "incidents": incidents
+        }
+
+    def _fetch_incidents_via_nrql(self, status: str, priority: Optional[str]) -> Dict[str, Any]:
+        """Fallback: query alert violations via NRQL when aiIssues is unavailable."""
+        nrql = "SELECT count(*) FROM NrAiIncident FACET conditionName, priority SINCE 7 days ago LIMIT 50"
+
+        try:
+            result = self._sync_graphql_request("""
+            {
+              actor {
+                account(id: %s) {
+                  nrql(query: "%s") {
+                    results
+                  }
+                }
+              }
+            }
+            """ % (self.account_id, nrql))
+
+            rows = result.get("actor", {}).get("account", {}).get("nrql", {}).get("results", [])
+        except Exception as e:
+            logger.warning("newrelic_nrql_incidents_failed", error=str(e))
+            rows = []
+
+        incidents = []
+        for row in rows:
+            nr_priority = str(row.get("priority", "medium")).lower()
+            if priority and nr_priority != priority:
+                continue
+            if status == "open" and row.get("state") == "closed":
+                continue
+            incidents.append({
+                "id": f"NRQL-{hash(row.get('conditionName', '')) % 10000}",
+                "title": row.get("conditionName", "Alert Condition"),
+                "priority": nr_priority if nr_priority in ("critical", "high", "medium", "low") else "medium",
+                "status": "open",
+                "service": "newrelic-alert",
+                "opened_at": datetime.now().isoformat(),
+                "duration_minutes": 0
+            })
+
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "total_incidents": len(incidents),
+            "by_priority": {
+                "critical": len([i for i in incidents if i["priority"] == "critical"]),
+                "high": len([i for i in incidents if i["priority"] == "high"]),
+                "medium": len([i for i in incidents if i["priority"] == "medium"]),
+                "low": len([i for i in incidents if i["priority"] == "low"])
+            },
+            "incidents": incidents
+        }
+
+    def _sync_graphql_request(self, query: str) -> Dict[str, Any]:
+        """Synchronous NerdGraph request for use outside async contexts."""
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                resp = client.post(
+                    self.graphql_url,
+                    headers=self._get_headers(),
+                    json={"query": query}
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                if "errors" in data:
+                    logger.warning("nerdgraph_errors", errors=data["errors"])
+                return data.get("data", {})
+        except Exception as e:
+            logger.error("nerdgraph_sync_request_failed", error=str(e))
+            return {}
     
     def _get_mock_incidents(
         self,

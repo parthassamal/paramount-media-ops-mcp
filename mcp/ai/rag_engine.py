@@ -12,11 +12,31 @@ Uses ChromaDB for vector storage and hybrid retrieval (dense + sparse).
 import os
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass
-import chromadb
-from chromadb.config import Settings as ChromaSettings
-from sentence_transformers import SentenceTransformer
-import numpy as np
 from datetime import datetime
+import logging
+
+_logger = logging.getLogger(__name__)
+
+try:
+    import chromadb
+    from chromadb.config import Settings as ChromaSettings
+    _HAS_CHROMADB = True
+except ImportError:
+    _HAS_CHROMADB = False
+    _logger.warning("chromadb not available - RAG engine will be disabled")
+
+try:
+    from sentence_transformers import SentenceTransformer
+    _HAS_ST = True
+except Exception:
+    _HAS_ST = False
+    SentenceTransformer = None
+    _logger.warning("sentence_transformers not available - RAG engine will be disabled")
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 
 @dataclass
@@ -52,13 +72,17 @@ class RAGEngine:
             collection_name: ChromaDB collection name
             embedding_model: Sentence transformer model for embeddings
         """
-        # Create persist directory if it doesn't exist
+        self._available = _HAS_CHROMADB and _HAS_ST
+
+        if not self._available:
+            _logger.warning("RAG engine dependencies not available - running in stub mode")
+            self.embedding_model = None
+            self.chroma_client = None
+            self.collection = None
+            return
+
         os.makedirs(persist_directory, exist_ok=True)
-        
-        # Initialize sentence transformer for embeddings
         self.embedding_model = SentenceTransformer(embedding_model)
-        
-        # Initialize ChromaDB client
         self.chroma_client = chromadb.Client(
             ChromaSettings(
                 persist_directory=persist_directory,
@@ -81,17 +105,19 @@ class RAGEngine:
     def index_confluence_pages(self, pages: List[Dict[str, Any]]) -> int:
         """
         Index Confluence documentation pages.
-        
+
         Args:
             pages: List of Confluence pages with 'id', 'title', 'content', 'url'
             
         Returns:
             Number of chunks indexed
         """
+        if not self._available:
+            return 0
+
         chunks_indexed = 0
-        
+
         for page in pages:
-            # Split content into chunks (500 characters with 50 overlap)
             chunks = self._chunk_text(page.get('content', ''), chunk_size=500, overlap=50)
             
             for i, chunk in enumerate(chunks):
@@ -129,8 +155,10 @@ class RAGEngine:
         Returns:
             Number of issues indexed
         """
+        if not self._available:
+            return 0
+
         for issue in issues:
-            # Combine summary, description, and resolution
             content = f"""
             Issue: {issue['summary']}
             
@@ -179,7 +207,9 @@ class RAGEngine:
         Returns:
             List of retrieval results sorted by relevance
         """
-        # Generate query embedding
+        if not self._available:
+            return []
+
         query_embedding = self.embedding_model.encode(query).tolist()
         
         # Build where filter
@@ -283,6 +313,8 @@ class RAGEngine:
     
     def get_collection_stats(self) -> Dict[str, Any]:
         """Get statistics about the indexed knowledge base."""
+        if not self._available:
+            return {"total_chunks": 0, "available": False, "reason": "RAG dependencies not installed"}
         count = self.collection.count()
         
         # Count by source type

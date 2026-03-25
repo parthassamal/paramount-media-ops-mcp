@@ -1,14 +1,16 @@
 """
-Multi-Agent System for Autonomous Production Issue Resolution.
+Rule-Based Multi-Agent Triage System for Production Issue Resolution.
 
-This module implements a collaborative agent system using AutoGen and CrewAI
-for self-healing production pipelines.
+Implements a lightweight collaborative agent system with specialized roles
+for analyzing, triaging, and resolving production incidents. Agents use
+heuristic tools and consensus scoring to determine actions.
 
-Patent-worthy innovation:
-- Multi-agent consensus mechanism for decision-making
-- Specialized agents (Analyzer, JIRA Specialist, Streaming Expert)
-- Pareto-driven prioritization in agent workflows
-- Self-healing with human-in-the-loop escalation
+Architecture:
+- Coordinator receives alerts and orchestrates the workflow
+- Analyzer diagnoses root cause via log pattern matching and metric correlation
+- JIRA Specialist handles ticket creation with Pareto-driven prioritization
+- Streaming Expert provides domain-specific QoE diagnostics
+- Consensus mechanism decides between auto-resolution and human escalation
 """
 
 from typing import List, Dict, Optional, Any, Callable

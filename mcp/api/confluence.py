@@ -18,8 +18,13 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/confluence", tags=["Confluence Knowledge Base"])
 
-# Initialize Atlassian client
-atlassian = AtlassianClient(mock_mode=settings.mock_mode)
+# Initialize Atlassian client with real Confluence credentials
+atlassian = AtlassianClient(
+    confluence_url=getattr(settings, "confluence_api_url", "") or getattr(settings, "atlassian_api_url", ""),
+    confluence_username=getattr(settings, "confluence_username", ""),
+    confluence_api_token=getattr(settings, "confluence_api_token", ""),
+    mock_mode=settings.mock_mode,
+)
 
 
 # Pydantic Models

@@ -103,20 +103,32 @@ async def export_operations_report(request: ExportReportRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+REPORTS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "reports")
+
+
 @router.get("/download-report/{filename}")
 async def download_report(filename: str):
-    """Download a generated PDF report."""
-    # Security check: only allow downloading .pdf files from current dir
-    if not filename.endswith(".pdf") or ".." in filename:
+    """Download a generated PDF report from the reports directory."""
+    if not filename.endswith(".pdf") or ".." in filename or "/" in filename or "\\" in filename:
         raise HTTPException(status_code=400, detail="Invalid filename")
-    
-    file_path = filename
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="File not found")
-        
+
+    os.makedirs(REPORTS_DIR, exist_ok=True)
+
+    candidate = os.path.join(REPORTS_DIR, filename)
+    resolved = os.path.realpath(candidate)
+    if not resolved.startswith(os.path.realpath(REPORTS_DIR)):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    if not os.path.exists(resolved):
+        legacy = os.path.join(os.getcwd(), filename)
+        if os.path.exists(legacy) and legacy.endswith(".pdf"):
+            resolved = legacy
+        else:
+            raise HTTPException(status_code=404, detail="File not found")
+
     return FileResponse(
-        path=file_path,
-        media_type='application/pdf',
+        path=resolved,
+        media_type="application/pdf",
         filename=filename
     )
 

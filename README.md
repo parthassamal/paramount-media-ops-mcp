@@ -258,18 +258,17 @@ mcp/
 - `sentence-transformers` - BERT-based semantic embeddings (all-MiniLM-L6-v2)
 - `faiss` - Facebook AI Similarity Search
 
-#### 2. **Autonomous Multi-Agent Production Resolution** 🤖
-**Novel System**: Self-healing production pipeline with agent collaboration and Pareto-driven prioritization
+#### 2. **Rule-Based Multi-Agent Triage System** 🤖
+**Novel System**: Lightweight multi-agent triage with specialized roles and consensus-based escalation
 
-**Patent Claims**:
-- "Multi-agent system for autonomous production issue detection, analysis, and resolution"
+**Key Features**:
 - Agent consensus mechanism with uncertainty quantification
 - Self-healing workflow with human-in-the-loop escalation based on confidence thresholds
+- Specialized heuristic tools per agent domain
 
 **Technology Stack**:
-- `pyautogen` - Microsoft AutoGen for agent communication
-- `crewai` - Agent specialization (Analyzer, JIRA Specialist, Streaming Expert)
-- `langgraph` - State machine workflows
+- Custom Python agent framework with tool registration
+- Consensus scoring with variance-based uncertainty penalty
 
 **Agents**:
 - **Analyzer Agent**: Root cause analysis, log correlation
@@ -370,11 +369,10 @@ RAG & Vector Search:
 ├── langchain-community (0.0.13) - Community integrations
 └── faiss-cpu (1.8.0) - Similarity search
 
-Multi-Agent Systems:
-├── pyautogen (0.2.5) - Microsoft AutoGen
-├── crewai (0.11.0) - Agent framework
-├── langgraph (0.0.26) - State machines
-└── dspy-ai (2.4.0) - LLM optimization
+Multi-Agent Triage:
+├── Custom agent framework - Specialized tool registration
+├── Consensus scoring - Weighted confidence averaging
+└── Escalation logic - Threshold-based human-in-the-loop
 
 Machine Learning:
 ├── lightgbm (4.5.0) - Gradient boosting
@@ -598,15 +596,18 @@ paramount-media-ops-mcp/
 │   │   ├── rca_store.py              # RCA audit trail
 │   │   └── review_store.py           # Review queue + SLA
 │   │
-│   ├── ai/                           # AI/ML Engines (v1)
-│   │   ├── rag_engine.py             # ChromaDB + sentence-transformers
+│   ├── ai/                           # AI/ML Engines
+│   │   ├── rag_engine.py             # ChromaDB + sentence-transformers (optional deps)
 │   │   ├── nlp_engine.py             # spaCy + TextBlob
 │   │   ├── vision_engine.py          # CLIP + YOLOv8
 │   │   ├── voice_engine.py           # Whisper + Coqui TTS
 │   │   ├── bayesian_analytics.py     # PyMC inference
 │   │   ├── advanced_statistics.py    # ARIMA, VAR, survival
-│   │   ├── multi_agent_system.py     # AutoGen + CrewAI
-│   │   └── workflow_automation.py    # LangGraph state machines
+│   │   ├── multi_agent_system.py     # Rule-based multi-agent triage
+│   │   └── workflow_automation.py    # State machine workflows
+│   │
+│   ├── middleware/                    # v3: Request middleware
+│   │   └── auth.py                   # API key authentication
 │   │
 │   ├── integrations/                 # External Service Connectors
 │   │   ├── atlassian_client.py       # Jira + Confluence
@@ -1155,13 +1156,12 @@ TESTRAIL_RCA_SECTION_ID=42
 
 ## 🔒 Security
 
-- **No hardcoded credentials** - All secrets via environment variables
+- **No hardcoded credentials** - All secrets via environment variables (`.env` is gitignored)
 - **Input validation** - Pydantic models for all requests
-- **Rate limiting** - Built-in FastAPI middleware
-- **CORS** - Configurable for production
-- **Dependency scanning** - Security patches applied
-
-See [SECURITY.md](./SECURITY.md) for details.
+- **API key authentication** - Optional `X-API-Key` header via `API_SECRET_KEY` env var
+- **CORS** - Configurable via `ALLOWED_ORIGINS` env var
+- **Path traversal protection** - Report download endpoint validates against fixed directory
+- **TTL caching** - In-memory cache prevents API abuse through redundant calls
 
 ---
 
@@ -1197,7 +1197,19 @@ See [SECURITY.md](./SECURITY.md) for details.
 - [x] **v2: Service map blast radius analysis**
 - [x] **v2: SQLite audit trail + review queue**
 - [x] **v2: Jinja2 structured prompt templates**
-- [ ] Real-time streaming data pipeline
+- [x] **v3: API key authentication middleware**
+- [x] **v3: Configurable CORS origins**
+- [x] **v3: SSE real-time event streaming**
+- [x] **v3: TTL caching layer for integration clients**
+- [x] **v3: React DataProvider context for API deduplication**
+- [x] **v3: Vitest + React Testing Library frontend tests**
+- [x] **v3: Docker + docker-compose containerization**
+- [x] **v3: Live NerdGraph incidents (replaced mock fallback)**
+- [x] **v3: Analytics derived from Jira (no more NotImplementedError)**
+- [x] **v3: Confluence live API calls when credentials configured**
+- [x] **v3: RCA Pipeline Step 7 actually transitions Jira tickets**
+- [x] **v3: PDF export uses live dashboard data**
+- [ ] Real-time streaming data pipeline (Conviva integration)
 - [ ] CI/CD integration for automated regression triggers
 
 ---

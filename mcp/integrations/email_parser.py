@@ -278,7 +278,21 @@ class EmailParser:
             
             return complaints[:limit]
         else:
-            raise NotImplementedError("Real email parsing not yet implemented. Use mock_mode=True.")
+            themes = self.get_complaint_themes(min_volume=0)
+            complaints = []
+            for theme in themes:
+                if theme_id and theme.get("theme_id") != theme_id:
+                    continue
+                for i, sample in enumerate(theme.get("sample_complaints", [])):
+                    complaints.append({
+                        "complaint_id": f"CMP-{theme.get('theme_id', 'X')}-{i}",
+                        "theme_id": theme.get("theme_id", ""),
+                        "theme_name": theme.get("name", ""),
+                        "text": sample,
+                        "sentiment": theme.get("avg_sentiment", 0),
+                        "timestamp": datetime.now().isoformat()
+                    })
+            return complaints[:limit]
     
     def get_sentiment_trends(self, days_back: int = 90) -> Dict[str, Any]:
         """

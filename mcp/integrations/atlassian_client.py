@@ -118,81 +118,137 @@ class AtlassianClient:
         return self._client
     
     # ==================== Confluence Core Methods ====================
-    
+
+    _STATIC_SPACES = [
+        {"id": "OPS", "key": "OPS", "name": "Operations", "type": "global", "url": "/wiki/spaces/OPS"},
+        {"id": "PROD", "key": "PROD", "name": "Production", "type": "global", "url": "/wiki/spaces/PROD"},
+    ]
+
+    _STATIC_PAGES = [
+        {"id": "123", "title": "Production Runbook", "space_key": "OPS", "url": "/wiki/spaces/OPS/pages/123", "created": "2025-01-01T00:00:00Z", "updated": "2025-01-01T00:00:00Z"},
+        {"id": "124", "title": "Incident Response", "space_key": "OPS", "url": "/wiki/spaces/OPS/pages/124", "created": "2025-01-01T00:00:00Z", "updated": "2025-01-01T00:00:00Z"},
+        {"id": "125", "title": "Deployment Guide", "space_key": "PROD", "url": "/wiki/spaces/PROD/pages/125", "created": "2025-01-01T00:00:00Z", "updated": "2025-01-01T00:00:00Z"},
+    ]
+
+    @property
+    def _confluence_configured(self) -> bool:
+        return bool(self.confluence_url and self.confluence_username and self.confluence_api_token)
+
     def get_confluence_spaces(self) -> List[Dict[str, Any]]:
-        """Get all Confluence spaces."""
-        return [
-            {
-                "id": "OPS",
-                "key": "OPS",
-                "name": "Operations",
-                "type": "global",
-                "url": "/wiki/spaces/OPS"
-            },
-            {
-                "id": "PROD",
-                "key": "PROD",
-                "name": "Production",
-                "type": "global",
-                "url": "/wiki/spaces/PROD"
-            }
-        ]
-    
+        """Get all Confluence spaces via REST when configured, otherwise static."""
+        if self.mock_mode or not self._confluence_configured:
+            return self._STATIC_SPACES
+
+        try:
+            with httpx.Client(timeout=15.0) as client:
+                resp = client.get(
+                    f"{self.confluence_url}/wiki/rest/api/space",
+                    params={"limit": 50},
+                    auth=self._get_confluence_auth(),
+                )
+                resp.raise_for_status()
+                results = resp.json().get("results", [])
+                return [
+                    {
+                        "id": s.get("id", s.get("key", "")),
+                        "key": s.get("key", ""),
+                        "name": s.get("name", ""),
+                        "type": s.get("type", "global"),
+                        "url": f"{self.confluence_url}/wiki/spaces/{s.get('key', '')}",
+                    }
+                    for s in results
+                ]
+        except Exception as e:
+            logger.warning(f"Confluence spaces fetch failed, using static: {e}")
+            return self._STATIC_SPACES
+
     def get_confluence_pages(self, space_key: str = None, limit: int = 50) -> List[Dict[str, Any]]:
-        """Get Confluence pages."""
-        all_pages = [
-            {
-                "id": "123",
-                "title": "Production Runbook",
-                "space_key": "OPS",
-                "url": "/wiki/spaces/OPS/pages/123",
-                "created": "2025-01-01T00:00:00Z",
-                "updated": "2025-01-01T00:00:00Z"
-            },
-            {
-                "id": "124",
-                "title": "Incident Response",
-                "space_key": "OPS",
-                "url": "/wiki/spaces/OPS/pages/124",
-                "created": "2025-01-01T00:00:00Z",
-                "updated": "2025-01-01T00:00:00Z"
-            },
-            {
-                "id": "125",
-                "title": "Deployment Guide",
-                "space_key": "PROD",
-                "url": "/wiki/spaces/PROD/pages/125",
-                "created": "2025-01-01T00:00:00Z",
-                "updated": "2025-01-01T00:00:00Z"
-            }
-        ]
+        """Get Confluence pages via REST or static fallback."""
+        if self.mock_mode or not self._confluence_configured:
+            pages = list(self._STATIC_PAGES)
+            if space_key:
+                pages = [p for p in pages if p["space_key"] == space_key]
+            return pages[:limit]
+
+        cql = 'type = "page"'
         if space_key:
-            all_pages = [p for p in all_pages if p["space_key"] == space_key]
-        return all_pages[:limit]
-    
+            cql += f' AND space = "{space_key}"'
+
+        try:
+            with httpx.Client(timeout=15.0) as client:
+                resp = client.get(
+                    f"{self.confluence_url}/wiki/rest/api/content/search",
+                    params={"cql": cql, "limit": limit, "expand": "space,version"},
+                    auth=self._get_confluence_auth(),
+                )
+                resp.raise_for_status()
+                results = resp.json().get("results", [])
+                return [
+                    {
+                        "id": p.get("id", ""),
+                        "title": p.get("title", ""),
+                        "space_key": p.get("space", {}).get("key", space_key or ""),
+                        "url": f"{self.confluence_url}{p.get('_links', {}).get('webui', '')}",
+                        "created": p.get("history", {}).get("createdDate", ""),
+                        "updated": p.get("version", {}).get("when", ""),
+                    }
+                    for p in results
+                ]
+        except Exception as e:
+            logger.warning(f"Confluence pages fetch failed, using static: {e}")
+            pages = list(self._STATIC_PAGES)
+            if space_key:
+                pages = [p for p in pages if p["space_key"] == space_key]
+            return pages[:limit]
+
     def create_confluence_page(self, space_key: str, title: str, content: str, parent_id: str = None) -> Dict[str, Any]:
-        """Create a new Confluence page."""
-        return {
-            "id": "999",
+        """Create a Confluence page via REST or return a static stub."""
+        if self.mock_mode or not self._confluence_configured:
+            return {
+                "id": "999", "title": title, "space_key": space_key,
+                "url": f"/wiki/spaces/{space_key}/pages/999",
+                "created": datetime.now().isoformat(), "updated": datetime.now().isoformat(),
+            }
+
+        payload: Dict[str, Any] = {
+            "type": "page",
             "title": title,
-            "space_key": space_key,
-            "url": f"/wiki/spaces/{space_key}/pages/999",
-            "created": "2025-01-01T00:00:00Z",
-            "updated": "2025-01-01T00:00:00Z"
+            "space": {"key": space_key},
+            "body": {"storage": {"value": content, "representation": "storage"}},
         }
-    
+        if parent_id:
+            payload["ancestors"] = [{"id": parent_id}]
+
+        try:
+            with httpx.Client(timeout=15.0) as client:
+                resp = client.post(
+                    f"{self.confluence_url}/wiki/rest/api/content",
+                    json=payload,
+                    auth=self._get_confluence_auth(),
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                return {
+                    "id": data.get("id", ""),
+                    "title": data.get("title", title),
+                    "space_key": space_key,
+                    "url": f"{self.confluence_url}{data.get('_links', {}).get('webui', '')}",
+                    "created": data.get("history", {}).get("createdDate", datetime.now().isoformat()),
+                    "updated": data.get("version", {}).get("when", datetime.now().isoformat()),
+                }
+        except Exception as e:
+            logger.error(f"Confluence page creation failed: {e}")
+            raise
+
     # ==================== Convenience Aliases ====================
     
     def get_spaces(self) -> List[Dict[str, Any]]:
-        """Alias for get_confluence_spaces."""
         return self.get_confluence_spaces()
     
     def get_pages(self, space_key: str = None, limit: int = 50) -> List[Dict[str, Any]]:
-        """Alias for get_confluence_pages."""
         return self.get_confluence_pages(space_key=space_key, limit=limit)
     
     def create_page(self, space_key: str, title: str, content: str, parent_id: str = None) -> Dict[str, Any]:
-        """Alias for create_confluence_page."""
         return self.create_confluence_page(space_key=space_key, title=title, content=content, parent_id=parent_id)
     
     # ==================== JIRA Methods ====================

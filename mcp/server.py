@@ -38,6 +38,7 @@ from mcp.tools import (
     create_generate_campaign
 )
 from mcp.api import jira_router, confluence_router, analytics_router, streaming_router, figma_router, adobe_router, ai_router, rca_router
+from mcp.api.events import router as events_router
 
 # Configure structured logging
 structlog.configure(
@@ -132,17 +133,20 @@ This platform provides **AI-native access** to Paramount+ operational data throu
 AI assistants like Claude, ChatGPT, and custom LLMs can query production issues, subscriber analytics, 
 and streaming metrics using natural language.
 
-Built for the **Paramount Hackathon 2025** | [View on GitHub](https://github.com/parthassamal/paramount-media-ops-mcp)
+Built for the **Paramount Hackathon** | [View on GitHub](https://github.com/parthassamal/paramount-media-ops-mcp)
 
 ---
 
-## 🎯 Key Features
+## Key Features
 
-- **🤖 AI-Callable Tools** - 5 intelligent tools for operational insights
-- **📊 Pareto Analysis** - Automatically identifies the vital 20% driving 80% of impact
-- **🔗 Live Integrations** - JIRA, Dynatrace, NewRelic, Analytics, Figma
-- **📈 Real-time Dashboards** - React UI with live Figma design sync
-- **📄 PDF Reports** - One-click executive reports with styling
+- **AI-Callable Tools** - 5 intelligent tools for operational insights
+- **Pareto Analysis** - Automatically identifies the vital 20% driving 80% of impact
+- **Live Integrations** - JIRA, Confluence, NewRelic, Datadog, TestRail, Dynatrace, Figma
+- **RCA Pipeline v2** - 7-step automated root cause analysis with TestRail write-back
+- **Real-time Dashboard** - React UI with live data and SSE event streaming
+- **PDF Reports** - One-click executive reports with live data
+- **API Authentication** - Optional X-API-Key header protection
+- **Docker Support** - Dockerfile + docker-compose for deployment
 
 ---
 
@@ -364,10 +368,22 @@ static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
-# Add CORS middleware for browser access
+# API key authentication middleware
+from mcp.middleware.auth import APIKeyMiddleware
+app.add_middleware(APIKeyMiddleware)
+
+# CORS -- configurable via ALLOWED_ORIGINS env var
+_default_origins = ["http://localhost:5173", "http://localhost:3000", "http://localhost:8000"]
+if settings.allowed_origins:
+    _cors_origins = [o.strip() for o in settings.allowed_origins.split(",") if o.strip()]
+elif settings.is_development:
+    _cors_origins = ["*"]
+else:
+    _cors_origins = _default_origins + ["https://paramount.com"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.is_development else ["https://paramount.com"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -382,6 +398,7 @@ app.include_router(figma_router)
 app.include_router(adobe_router)
 app.include_router(ai_router)  # Patent-worthy AI services
 app.include_router(rca_router)  # RCA Pipeline v2
+app.include_router(events_router)  # SSE real-time events
 
 # Custom Swagger UI with styling
 @app.get("/docs", include_in_schema=False)

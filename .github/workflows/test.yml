@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  backend-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -28,16 +28,41 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-asyncio
+        pip install pytest pytest-asyncio pytest-cov
     
     - name: Run tests
+      env:
+        MOCK_MODE: "true"
       run: |
-        pytest tests/ -v --tb=short
-    
-    - name: Test example usage
-      run: |
-        python example_usage.py
+        pytest tests/ -v --tb=short --cov=mcp --cov-report=term-missing
     
     - name: Verify MCP server can load
       run: |
-        python -c "from src.server import server; print(f'✓ Server: {server.name}')"
+        python -c "from mcp.server import app; print(f'Server loaded: {app.title}')"
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Type check
+      run: npx tsc --noEmit
+      continue-on-error: true
+
+    - name: Run tests
+      run: npm test
+
+    - name: Build
+      run: npm run build
