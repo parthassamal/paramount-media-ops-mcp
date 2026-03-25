@@ -47,3 +47,11 @@ datadog-api-client>=2.25.0
 
 # Adobe Cloud Services (optional)
 # adobe-pdfservices-sdk>=3.5.0
+
+# ── v3: Enterprise Features ──────────────────────────────────────────────────
+# Background task scheduler for SLA checks, proactive monitoring, verification polling
+apscheduler>=3.10.4
+
+# Secrets Manager backends (optional - install based on your backend)
+# boto3>=1.34.0              # Uncomment for AWS Secrets Manager
+# hvac>=2.1.0                # Uncomment for HashiCorp Vault

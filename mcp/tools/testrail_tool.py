@@ -216,6 +216,92 @@ def create_rca_verification_run(
     return result
 
 
+def get_run_results(run_id: int) -> Dict[str, Any]:
+    """
+    Get results for a test run - used for post-deployment verification.
+    
+    Returns:
+        {
+            "completed": bool,
+            "total": int,
+            "passed_count": int,
+            "failed_count": int,
+            "blocked_count": int,
+            "untested_count": int,
+            "pass_rate": float,
+            "all_passed": bool,
+            "failed_case_ids": list[int]
+        }
+    """
+    run = _tr("GET", f"get_run/{run_id}")
+    if not run:
+        return {"completed": False, "total": 0, "all_passed": False}
+    
+    # Get test results for this run
+    tests = _tr("GET", f"get_tests/{run_id}")
+    if not tests:
+        tests = []
+    
+    # TestRail status IDs: 1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed
+    passed = 0
+    failed = 0
+    blocked = 0
+    untested = 0
+    failed_case_ids = []
+    
+    for test in tests:
+        status = test.get("status_id")
+        if status == 1:
+            passed += 1
+        elif status == 5:
+            failed += 1
+            failed_case_ids.append(test.get("case_id"))
+        elif status == 2:
+            blocked += 1
+        else:  # 3 (untested) or 4 (retest) or None
+            untested += 1
+    
+    total = len(tests)
+    completed = run.get("is_completed", False) or (untested == 0 and total > 0)
+    pass_rate = (passed / total * 100) if total > 0 else 0.0
+    all_passed = (passed == total) and (total > 0) and (failed == 0) and (blocked == 0)
+    
+    return {
+        "completed": completed,
+        "total": total,
+        "passed_count": passed,
+        "failed_count": failed,
+        "blocked_count": blocked,
+        "untested_count": untested,
+        "pass_rate": round(pass_rate, 2),
+        "all_passed": all_passed,
+        "failed_case_ids": failed_case_ids
+    }
+
+
+def get_results_for_case(case_id: int, run_id: int = None, limit: int = 10) -> List[Dict[str, Any]]:
+    """Get result history for a specific test case."""
+    if run_id:
+        endpoint = f"get_results_for_case/{run_id}/{case_id}"
+    else:
+        endpoint = f"get_results/{case_id}&limit={limit}"
+    
+    results = _tr("GET", endpoint)
+    return results if isinstance(results, list) else results.get("results", [])
+
+
+def add_result_for_case(run_id: int, case_id: int, status_id: int, comment: str = "") -> Dict[str, Any]:
+    """
+    Add a result to a test case in a run.
+    
+    Status IDs: 1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed
+    """
+    return _tr("POST", f"add_result_for_case/{run_id}/{case_id}", {
+        "status_id": status_id,
+        "comment": comment
+    })
+
+
 # =============================================================================
 # Tiered Matching (50 / 75 / 100% thresholds)
 # =============================================================================

@@ -75,7 +75,12 @@ class AnalyticsClient:
         for idx, cat in enumerate(RISK_CATEGORIES):
             matched = [
                 iss for iss in issues
-                if any(kw in (iss.get("summary", "") + " " + iss.get("description", "")).lower() for kw in cat["keyword_group"])
+                if any(
+                    kw in (
+                        f"{iss.get('summary', '')} {iss.get('description', '')}"
+                    ).lower()
+                    for kw in cat["keyword_group"]
+                )
             ]
             issue_count = len(matched)
             if issue_count == 0:

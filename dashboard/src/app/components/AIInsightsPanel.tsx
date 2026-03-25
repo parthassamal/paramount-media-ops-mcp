@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { Sparkles, TrendingUp, AlertCircle, Lightbulb, Loader2 } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Sparkles, TrendingUp, AlertCircle, Lightbulb, Loader2, Play, CheckCircle } from 'lucide-react';
 
 import { API_BASE } from '../../config/api';
+
+interface AIInsightsPanelProps {
+  fullPage?: boolean;
+}
 
 type JiraIssue = {
   key: string;
@@ -10,6 +14,7 @@ type JiraIssue = {
   status: string;
   assignee: string;
   url: string;
+  team?: string;
 };
 
 type Insight = {
@@ -20,6 +25,12 @@ type Insight = {
   impact: string;
   jiraKey: string;
   url: string;
+  service: string;
+};
+
+type RcaStatus = {
+  has_rca: boolean;
+  stage?: string;
 };
 
 function extractPriority(summary: string): 'critical' | 'high' | 'medium' {
@@ -70,11 +81,45 @@ const priorityConfig = {
 
 const iconMap = { critical: AlertCircle, high: TrendingUp, medium: Lightbulb };
 
-export function AIInsightsPanel() {
+export function AIInsightsPanel({ fullPage = false }: AIInsightsPanelProps) {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [counts, setCounts] = useState({ critical: 0, high: 0, medium: 0 });
+  const [rcaStatuses, setRcaStatuses] = useState<Record<string, RcaStatus>>({});
+  const [triggeringRca, setTriggeringRca] = useState<string | null>(null);
+
+  const triggerRca = useCallback(async (insight: Insight) => {
+    setTriggeringRca(insight.jiraKey);
+    try {
+      const res = await fetch(`${API_BASE}/api/rca/pipeline/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: insight.jiraKey,
+          summary: insight.description,
+          service: insight.service.toLowerCase(),
+          priority: insight.priority,
+          description: insight.description,
+        }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setRcaStatuses(prev => ({
+          ...prev,
+          [insight.jiraKey]: { has_rca: true, stage: data.stage }
+        }));
+      } else {
+        const err = await res.json();
+        alert(`RCA Failed: ${err.detail || 'Unknown error'}`);
+      }
+    } catch (e) {
+      alert('Failed to trigger RCA pipeline');
+    } finally {
+      setTriggeringRca(null);
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -95,6 +140,7 @@ export function AIInsightsPanel() {
             impact: generateImpact(priority),
             jiraKey: issue.key,
             url: issue.url,
+            service,
           };
         });
 
@@ -107,6 +153,16 @@ export function AIInsightsPanel() {
         mapped.forEach((i) => c[i.priority]++);
         setCounts(c);
         setInsights(mapped);
+
+        // Fetch RCA statuses
+        const keys = mapped.map(i => i.jiraKey).filter(Boolean);
+        if (keys.length > 0) {
+          const rcaRes = await fetch(`${API_BASE}/api/rca/status/batch?jira_keys=${keys.join(',')}`);
+          if (rcaRes.ok) {
+            const rcaData = await rcaRes.json();
+            setRcaStatuses(rcaData.statuses || {});
+          }
+        }
       } catch (err: any) {
         console.error('AIInsightsPanel fetch error:', err);
         setError(err?.message || 'Failed to load insights');
@@ -155,24 +211,62 @@ export function AIInsightsPanel() {
             <p className="text-sm">No production issues found in Jira</p>
           </div>
         ) : (
-          <div className="space-y-4 max-h-[480px] overflow-y-auto pr-1">
+          <div className={`space-y-4 ${fullPage ? 'max-h-none' : 'max-h-[480px]'} overflow-y-auto pr-1`}>
             {insights.map((insight, index) => {
               const Icon = iconMap[insight.priority];
               const config = priorityConfig[insight.priority];
+              const rcaStatus = rcaStatuses[insight.jiraKey];
+              const hasRca = rcaStatus?.has_rca;
+              const isTriggering = triggeringRca === insight.jiraKey;
+              
               return (
                 <div
                   key={index}
-                  onClick={() => window.open(insight.url, '_blank', 'noopener,noreferrer')}
-                  className={`${config.bg} ${config.border} border rounded-xl p-5 transition-all hover:scale-[1.02] hover:shadow-lg cursor-pointer group`}
+                  className={`${config.bg} ${config.border} border rounded-xl p-5 transition-all hover:shadow-lg group`}
                 >
                   <div className="flex items-start gap-4">
                     <div className={`${config.bg} p-3 rounded-lg flex-shrink-0`}>
                       <Icon className={`w-5 h-5 ${config.text}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-bold text-white group-hover:text-[#0064FF] transition-colors">{insight.title}</h3>
-                        <span className={`${config.badge} px-2 py-0.5 rounded text-xs font-bold text-white`}>{config.label}</span>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h3 
+                            className="font-bold text-white group-hover:text-[#0064FF] transition-colors cursor-pointer truncate"
+                            onClick={() => window.open(insight.url, '_blank', 'noopener,noreferrer')}
+                          >
+                            {insight.title}
+                          </h3>
+                          <span className={`${config.badge} px-2 py-0.5 rounded text-xs font-bold text-white flex-shrink-0`}>{config.label}</span>
+                        </div>
+                        {/* RCA Button */}
+                        {hasRca ? (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 border border-green-500/30 rounded-lg flex-shrink-0">
+                            <CheckCircle className="w-3 h-3 text-green-400" />
+                            <span className="text-xs font-medium text-green-400 capitalize">{rcaStatus?.stage?.replace('_', ' ') || 'RCA'}</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerRca(insight);
+                            }}
+                            disabled={isTriggering}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0064FF]/10 border border-[#0064FF]/30 rounded-lg text-xs font-medium text-[#0064FF] hover:bg-[#0064FF]/20 transition-colors disabled:opacity-50 flex-shrink-0"
+                          >
+                            {isTriggering ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Running...
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-3 h-3" />
+                                Run RCA
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                       <p className="text-sm text-slate-300 mb-3 leading-relaxed">{insight.description}</p>
                       <div className="flex items-center justify-between gap-4 pt-3 border-t border-slate-700/50">

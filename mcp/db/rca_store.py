@@ -110,6 +110,23 @@ def get_rcas_by_jira(jira_ticket_id: str) -> List[RCARecord]:
     return [RCARecord.model_validate_json(row["data"]) for row in rows]
 
 
+def get_rca_by_jira_key(jira_key: str) -> Optional[RCARecord]:
+    """
+    Fetch the most recent RCA record for a Jira ticket key.
+    Used by dashboard to show pipeline stage badges.
+    """
+    conn = _get_conn()
+    row = conn.execute(
+        "SELECT data FROM rca_records WHERE jira_ticket_id = ? ORDER BY created_at DESC LIMIT 1",
+        (jira_key,)
+    ).fetchone()
+    conn.close()
+    
+    if row:
+        return RCARecord.model_validate_json(row["data"])
+    return None
+
+
 def get_recent_rcas(limit: int = 50) -> List[RCARecord]:
     """Fetch recent RCA records."""
     conn = _get_conn()

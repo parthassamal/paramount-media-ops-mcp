@@ -44,13 +44,14 @@ async def export_operations_report(request: ExportReportRequest):
     from mcp.integrations.adobe_storage_client import create_adobe_storage_client
     from config import settings
     
-    # Get Adobe PDF client
+    # Get Adobe PDF client - always returns a client (with fallback PDF generation if not enabled)
     adobe_pdf = create_adobe_pdf_client()
-    if not adobe_pdf or (not adobe_pdf.enabled and not settings.mock_mode):
+    if not adobe_pdf:
         raise HTTPException(
             status_code=503,
-            detail="Adobe PDF Services not configured. Set ADOBE_PDF_ENABLED=true and credentials."
+            detail="Adobe PDF Services client could not be created."
         )
+    # Note: PDF generation works even when adobe_pdf.enabled=False (uses HTML-to-PDF fallback)
     
     try:
         # Generate PDF based on report type
@@ -281,12 +282,16 @@ async def adobe_health_check():
     pdf_client = create_adobe_pdf_client()
     storage_client = create_adobe_storage_client()
     
+    # PDF generation always works - either via Adobe SDK or HTML-to-PDF fallback
+    pdf_mode = "adobe_sdk" if (pdf_client and pdf_client.enabled) else "fallback_html"
+    
     return {
         "status": "success",
         "services": {
             "pdf_services": {
-                "enabled": pdf_client.enabled if pdf_client else False,
-                "status": "operational" if (pdf_client and pdf_client.enabled) else ("mock_operational" if settings.mock_mode else "disabled")
+                "enabled": True,  # Always enabled - fallback mode available
+                "mode": pdf_mode,
+                "status": "operational" if (pdf_client and pdf_client.enabled) else "fallback_operational"
             },
             "cloud_storage": {
                 "enabled": storage_client.enabled if storage_client else False,

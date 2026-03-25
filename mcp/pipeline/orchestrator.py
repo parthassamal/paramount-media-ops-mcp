@@ -11,23 +11,35 @@ Steps:
    → TestRail WRITE (approved cases only)
 6. Blast radius from service map
 7. Jira close with full RCA artifact
+
+Enterprise Features:
+- Idempotency: Prevents duplicate RCAs for same Jira ticket
+- Retry/Resume: Can resume from any failed stage
+- Concurrency Lock: Prevents race conditions on same service
+- Notifications: Slack/Jira alerts on key events
+- Integrity Hash: SHA-256 tamper evidence on artifacts
 """
 
 import uuid
+import fcntl
+import os
 from datetime import datetime
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Tuple
+from contextlib import contextmanager
 
 from config import settings
-from mcp.models.rca_models import RCARecord, PipelineStage, MatchConfidence
+from mcp.models.rca_models import RCARecord, PipelineStage, MatchConfidence, VerificationResult, RemediationAction
 from mcp.models.evidence_models import EvidenceBundle
-from mcp.db.rca_store import upsert_rca, get_rca, check_for_duplicates
+from mcp.db.rca_store import upsert_rca, get_rca, check_for_duplicates, get_rca_by_jira_key
 from mcp.db.review_store import create_review_item
 from mcp.tools.newrelic_tool import capture_newrelic_snapshot
 from mcp.tools.datadog_tool import capture_datadog_snapshot
 from mcp.tools.evidence_normalizer import normalize_evidence
 from mcp.tools.testrail_tool import (
     find_testrail_match, create_test_cases_bulk,
-    create_rca_verification_run, add_cases_to_regression_run
+    create_rca_verification_run, add_cases_to_regression_run,
+    get_run_results
 )
 from mcp.tools.ai_summarizer import summarize_incident
 from mcp.tools.test_generator import generate_test_cases
@@ -37,24 +49,105 @@ from mcp.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Lock directory for concurrency control
+LOCK_DIR = Path(__file__).parent.parent.parent / "data" / "locks"
+LOCK_DIR.mkdir(parents=True, exist_ok=True)
+
+
+class PipelineLockError(Exception):
+    """Raised when unable to acquire pipeline lock."""
+    pass
+
+
+class IdempotencyError(Exception):
+    """Raised when duplicate pipeline run detected."""
+    pass
+
+
+@contextmanager
+def pipeline_lock(service_name: str, timeout: float = 30.0):
+    """
+    Acquire an exclusive lock for a service to prevent concurrent pipeline runs.
+    Uses file-based locking for simplicity and portability.
+    """
+    lock_file = LOCK_DIR / f"{service_name.replace('/', '_')}.lock"
+    lock_fd = None
+    
+    try:
+        lock_fd = open(lock_file, 'w')
+        fcntl.flock(lock_fd.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        lock_fd.write(f"{os.getpid()}:{datetime.utcnow().isoformat()}")
+        lock_fd.flush()
+        logger.debug("pipeline_lock_acquired", service=service_name)
+        yield
+    except BlockingIOError:
+        raise PipelineLockError(f"Pipeline already running for service: {service_name}")
+    finally:
+        if lock_fd:
+            fcntl.flock(lock_fd.fileno(), fcntl.LOCK_UN)
+            lock_fd.close()
+            try:
+                lock_file.unlink()
+            except:
+                pass
+            logger.debug("pipeline_lock_released", service=service_name)
+
 
 class RCAPipeline:
-    """Orchestrates the full RCA pipeline as a state machine."""
+    """
+    Orchestrates the full RCA pipeline as a state machine.
+    
+    Features:
+    - Idempotency: Same Jira ticket won't create duplicate RCAs
+    - Concurrency: Lock prevents race conditions on same service
+    - Retry/Resume: Failed pipelines can be resumed from last stage
+    - Notifications: Alerts on REVIEW_PENDING and failures
+    """
 
     def run(self, jira_ticket: dict) -> RCARecord:
         """
         Execute the pipeline from intake through test generation.
         Pauses at REVIEW_PENDING if test generation is triggered.
+        
+        Idempotency: If an RCA already exists for this Jira ticket and is not
+        completed/failed, returns the existing record instead of creating a new one.
         """
+        jira_key = jira_ticket["id"]
+        service = jira_ticket.get("service", "unknown")
+        
+        # Idempotency check: Return existing active RCA
+        existing = get_rca_by_jira_key(jira_key)
+        if existing and existing.stage not in (PipelineStage.COMPLETED, PipelineStage.FAILED):
+            logger.info(
+                "idempotency_hit",
+                jira=jira_key,
+                rca_id=existing.rca_id,
+                stage=existing.stage.value
+            )
+            return existing
+        
+        # Create new RCA record
         record = RCARecord(
             rca_id=str(uuid.uuid4()),
-            jira_ticket_id=jira_ticket["id"],
+            jira_ticket_id=jira_key,
             created_at=datetime.utcnow(),
-            service_name=jira_ticket.get("service", ""),
+            service_name=service,
             stage=PipelineStage.INTAKE
         )
+        record.record_stage_timestamp(PipelineStage.INTAKE)
         upsert_rca(record)
-
+        
+        # Acquire lock for the service to prevent concurrent runs
+        try:
+            with pipeline_lock(service):
+                return self._execute_pipeline(record, jira_ticket)
+        except PipelineLockError as e:
+            logger.warning("pipeline_lock_failed", jira=jira_key, error=str(e))
+            # Return the record in INTAKE state - caller can retry later
+            return record
+    
+    def _execute_pipeline(self, record: RCARecord, jira_ticket: dict) -> RCARecord:
+        """Execute the pipeline stages with error handling."""
         try:
             # Step 1: Duplicate detection
             self._step_intake(record, jira_ticket)
@@ -71,6 +164,7 @@ class RCAPipeline:
             # Step 5: Generate test cases if needed
             if match.confidence in (MatchConfidence.NO_MATCH.value, MatchConfidence.LOW.value):
                 self._step_test_generation(record, evidence)
+                self._send_review_notification(record)
                 return record  # Pauses for human review
 
             # Step 6+7: Blast radius + close (for PROBABLE/EXACT matches)
@@ -79,9 +173,118 @@ class RCAPipeline:
 
         except Exception as e:
             record.stage = PipelineStage.FAILED
+            record.last_failed_stage = record.stage
+            record.failure_reason = str(e)[:500]
+            record.retry_count += 1
             upsert_rca(record)
+            
+            self._send_failure_notification(record, str(e))
             logger.exception("Pipeline failed", rca_id=record.rca_id, error=str(e))
             raise
+    
+    def resume_from_stage(self, rca_id: str, stage: Optional[PipelineStage] = None) -> RCARecord:
+        """
+        Resume a failed pipeline from a specific stage.
+        
+        Args:
+            rca_id: The RCA record ID to resume
+            stage: Stage to resume from (defaults to last_failed_stage or current stage)
+            
+        Returns:
+            Updated RCARecord
+        """
+        record = get_rca(rca_id)
+        if not record:
+            raise ValueError(f"RCA {rca_id} not found")
+        
+        if not record.can_retry():
+            raise ValueError(f"RCA {rca_id} cannot be retried (stage={record.stage}, retries={record.retry_count})")
+        
+        # Determine resume stage
+        resume_stage = stage or record.last_failed_stage or record.stage
+        
+        logger.info(
+            "pipeline_resuming",
+            rca_id=rca_id,
+            from_stage=resume_stage.value,
+            retry_count=record.retry_count
+        )
+        
+        # Rebuild evidence if we have it
+        evidence = self._rebuild_evidence(record)
+        
+        # Create a minimal jira_ticket dict from the record
+        jira_ticket = {
+            "id": record.jira_ticket_id,
+            "service": record.service_name,
+            "summary": record.ai_summary or ""
+        }
+        
+        try:
+            with pipeline_lock(record.service_name or "unknown"):
+                # Resume from the appropriate stage
+                if resume_stage in (PipelineStage.INTAKE, PipelineStage.EVIDENCE_CAPTURE):
+                    evidence = self._step_evidence_capture(record, jira_ticket)
+                    resume_stage = PipelineStage.SUMMARIZATION
+                
+                if resume_stage == PipelineStage.SUMMARIZATION:
+                    self._step_summarize(record, jira_ticket, evidence)
+                    resume_stage = PipelineStage.TESTRAIL_MATCH
+                
+                if resume_stage == PipelineStage.TESTRAIL_MATCH:
+                    match = self._step_testrail_match(record, jira_ticket)
+                    if match.confidence in (MatchConfidence.NO_MATCH.value, MatchConfidence.LOW.value):
+                        self._step_test_generation(record, evidence)
+                        return record
+                    resume_stage = PipelineStage.BLAST_RADIUS
+                
+                if resume_stage in (PipelineStage.TEST_GENERATION, PipelineStage.REVIEW_PENDING):
+                    # Already at review - nothing to resume
+                    return record
+                
+                if resume_stage in (PipelineStage.BLAST_RADIUS, PipelineStage.JIRA_CLOSE):
+                    self._step_blast_radius(record, evidence)
+                
+                return record
+                
+        except Exception as e:
+            record.stage = PipelineStage.FAILED
+            record.failure_reason = str(e)[:500]
+            record.retry_count += 1
+            upsert_rca(record)
+            logger.exception("Pipeline resume failed", rca_id=rca_id, error=str(e))
+            raise
+    
+    def _send_review_notification(self, record: RCARecord):
+        """Send notification that test cases are ready for review."""
+        try:
+            import asyncio
+            from mcp.utils.notifications import notify
+            
+            asyncio.create_task(notify("review_pending", {
+                "rca_id": record.rca_id,
+                "jira_ticket_id": record.jira_ticket_id,
+                "cases_count": len(record.generated_test_cases or []),
+                "match_confidence": record.testrail_match_confidence,
+                "sla_deadline": "24 hours"
+            }))
+        except Exception as e:
+            logger.warning("notification_failed", event="review_pending", error=str(e))
+    
+    def _send_failure_notification(self, record: RCARecord, error: str):
+        """Send notification that pipeline failed."""
+        try:
+            import asyncio
+            from mcp.utils.notifications import notify
+            
+            asyncio.create_task(notify("pipeline_failed", {
+                "rca_id": record.rca_id,
+                "jira_ticket_id": record.jira_ticket_id,
+                "stage": record.stage.value,
+                "error": error[:200]
+            }))
+        except Exception as e:
+            logger.warning("notification_failed", event="pipeline_failed", error=str(e))
 
     def resume_after_review(
         self,
@@ -145,6 +348,8 @@ class RCAPipeline:
 
     def _step_intake(self, record: RCARecord, jira_ticket: dict):
         """Step 1: Duplicate detection and severity assessment."""
+        record.record_stage_timestamp(PipelineStage.INTAKE)
+        
         dup = check_for_duplicates(jira_ticket.get("summary", ""))
         if dup:
             record.is_duplicate = True
@@ -161,6 +366,7 @@ class RCAPipeline:
     def _step_evidence_capture(self, record: RCARecord, jira_ticket: dict) -> EvidenceBundle:
         """Step 2: Capture evidence from configured observability sources."""
         record.stage = PipelineStage.EVIDENCE_CAPTURE
+        record.record_stage_timestamp(PipelineStage.EVIDENCE_CAPTURE)
         upsert_rca(record)
 
         service = jira_ticket.get("service", record.service_name or "")
@@ -200,14 +406,17 @@ class RCAPipeline:
     def _step_summarize(self, record: RCARecord, jira_ticket: dict, evidence: EvidenceBundle):
         """Step 3: AI summarization."""
         record.stage = PipelineStage.SUMMARIZATION
+        record.record_stage_timestamp(PipelineStage.SUMMARIZATION)
         upsert_rca(record)
 
         record.ai_summary = summarize_incident(jira_ticket, evidence)
+        record.summary_prompt_version = "1.0"  # Pin version for compatibility
         upsert_rca(record)
 
     def _step_testrail_match(self, record: RCARecord, jira_ticket: dict):
         """Step 4: TestRail tiered matching."""
         record.stage = PipelineStage.TESTRAIL_MATCH
+        record.record_stage_timestamp(PipelineStage.TESTRAIL_MATCH)
         upsert_rca(record)
 
         match = find_testrail_match(
@@ -232,11 +441,13 @@ class RCAPipeline:
     def _step_test_generation(self, record: RCARecord, evidence: EvidenceBundle):
         """Step 5: Generate test cases + submit for human review."""
         record.stage = PipelineStage.TEST_GENERATION
+        record.record_stage_timestamp(PipelineStage.TEST_GENERATION)
         upsert_rca(record)
 
         cases = generate_test_cases(record, evidence)
         record.generated_test_cases = cases
         record.stage = PipelineStage.REVIEW_PENDING
+        record.record_stage_timestamp(PipelineStage.REVIEW_PENDING)
         upsert_rca(record)
 
         create_review_item(
@@ -257,6 +468,7 @@ class RCAPipeline:
     def _step_blast_radius(self, record: RCARecord, evidence: EvidenceBundle):
         """Step 6: Compute blast radius and test scope."""
         record.stage = PipelineStage.BLAST_RADIUS
+        record.record_stage_timestamp(PipelineStage.BLAST_RADIUS)
         upsert_rca(record)
 
         blast = compute_blast_radius(evidence)
@@ -278,16 +490,40 @@ class RCAPipeline:
         )
 
     def _step_jira_close(self, record: RCARecord, blast: dict):
-        """Step 7: Close Jira with full RCA artifact, transition ticket, and add comment."""
+        """
+        Step 7: Close Jira with full RCA artifact, transition ticket, and add comment.
+        
+        BLOCKS CLOSE if validate_artifact() fails:
+        - root_cause must be present
+        - timeline must be present
+        - fix_verified must be True (regression run passed)
+        - remediation_owners must have at least one action with owner/due_date
+        """
         import json as _json
         import httpx
 
         record.stage = PipelineStage.JIRA_CLOSE
+        record.record_stage_timestamp(PipelineStage.JIRA_CLOSE)
         upsert_rca(record)
+
+        # VALIDATE ARTIFACT BEFORE CLOSE - this is the gate
+        can_close, reason = record.can_close_jira()
+        if not can_close:
+            logger.warning(
+                "jira_close_blocked",
+                rca_id=record.rca_id,
+                reason=reason
+            )
+            # Don't fail the pipeline, but don't close the ticket either
+            # Leave in JIRA_CLOSE stage for manual resolution
+            record.failure_reason = f"Close blocked: {reason}"
+            upsert_rca(record)
+            return  # Ticket stays open until requirements are met
 
         artifact = {
             "rca_id": record.rca_id,
-            "root_cause": record.ai_summary,
+            "root_cause": record.ai_summary or record.root_cause,
+            "timeline": record.timeline or list(record.stage_timestamps.keys()),
             "evidence_sources": record.error_metrics.get("sources", []) if record.error_metrics else [],
             "testrail_match": {
                 "confidence": record.testrail_match_confidence,
@@ -298,6 +534,10 @@ class RCAPipeline:
                 "created_case_ids": record.testrail_created_case_ids or [],
                 "verification_run_id": record.testrail_verification_run_id
             },
+            "verification": {
+                "fix_verified": record.fix_verified,
+                "verification_result": record.verification_result.model_dump() if record.verification_result else None
+            },
             "blast_radius": {
                 "impacted_components": record.impacted_components or [],
                 "risk_level": blast.get("risk_level", "unknown"),
@@ -307,7 +547,7 @@ class RCAPipeline:
                 "smoke_suite_ids": record.smoke_scope or [],
                 "regression_suite_ids": record.regression_scope or []
             },
-            "remediation_owners": []
+            "remediation_owners": [r.model_dump() for r in record.remediation_owners]
         }
 
         record.rca_artifact_url = f"/api/rca/pipeline/{record.rca_id}"
@@ -321,13 +561,22 @@ class RCAPipeline:
             auth = (jira_email, jira_token)
             headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
+            # Enhanced comment with verification status
+            verification_status = "✅ PASSED" if record.fix_verified else "⚠️ PENDING"
+            remediation_summary = "\n".join([
+                f"  • {r.action} (Owner: {r.owner}, Due: {r.due_date.strftime('%Y-%m-%d')})"
+                for r in record.remediation_owners
+            ]) or "  None defined"
+
             comment_body = (
                 f"*RCA Pipeline Complete* ({record.rca_id})\n\n"
                 f"*Root Cause:* {record.ai_summary or 'N/A'}\n"
                 f"*Blast Radius:* {blast.get('risk_level', 'unknown')} "
                 f"({blast.get('total_blast_radius', 0)} components affected)\n"
                 f"*TestRail Cases Created:* {len(record.testrail_created_case_ids or [])}\n"
-                f"*Verification Run:* {record.testrail_verification_run_id or 'N/A'}\n\n"
+                f"*Verification Run:* {record.testrail_verification_run_id or 'N/A'}\n"
+                f"*Fix Verified:* {verification_status}\n\n"
+                f"*Remediation Actions:*\n{remediation_summary}\n\n"
                 f"Full artifact: {record.rca_artifact_url}"
             )
 
@@ -373,15 +622,89 @@ class RCAPipeline:
                 logger.warning("jira_transition_failed", jira=jira_key, error=str(e))
 
         record.jira_closed = True
+        record.closed_at = datetime.utcnow()
         record.stage = PipelineStage.COMPLETED
+        record.record_stage_timestamp(PipelineStage.COMPLETED)
+        
+        # Compute and store integrity hash for tamper evidence
+        record.artifact_hash = record.compute_artifact_hash()
+        
         upsert_rca(record)
 
         logger.info(
             "Jira closed with RCA artifact",
             rca_id=record.rca_id,
             jira=record.jira_ticket_id,
-            cases_written=len(record.testrail_created_case_ids or [])
+            cases_written=len(record.testrail_created_case_ids or []),
+            cycle_time_hours=record.cycle_time_hours,
+            artifact_hash=record.artifact_hash[:16] + "...",
+            fix_verified=record.fix_verified,
+            remediation_count=len(record.remediation_owners)
         )
+    
+    def verify_regression_results(self, rca_id: str) -> VerificationResult:
+        """
+        Post-deployment verification: check that new test cases passed.
+        
+        Called by scheduler or manually after deployment to verify the fix.
+        If cases fail, triggers a mini-RCA and blocks Jira close.
+        """
+        record = get_rca(rca_id)
+        if not record:
+            raise ValueError(f"RCA {rca_id} not found")
+        
+        if not record.testrail_verification_run_id:
+            raise ValueError(f"RCA {rca_id} has no verification run to check")
+        
+        record.stage = PipelineStage.VERIFICATION_PENDING
+        record.record_stage_timestamp(PipelineStage.VERIFICATION_PENDING)
+        record.verification_attempts += 1
+        upsert_rca(record)
+        
+        # Get run results from TestRail
+        results = get_run_results(record.testrail_verification_run_id)
+        
+        verification = VerificationResult(
+            run_id=record.testrail_verification_run_id,
+            total_cases=results.get("total", 0),
+            passed=results.get("passed_count", 0),
+            failed=results.get("failed_count", 0),
+            blocked=results.get("blocked_count", 0),
+            untested=results.get("untested_count", 0),
+            pass_rate=results.get("pass_rate", 0.0),
+            all_passed=results.get("all_passed", False),
+            failed_case_ids=results.get("failed_case_ids", [])
+        )
+        
+        record.verification_result = verification
+        
+        if verification.all_passed:
+            record.fix_verified = True
+            record.stage = PipelineStage.VERIFICATION_COMPLETE
+            record.record_stage_timestamp(PipelineStage.VERIFICATION_COMPLETE)
+            logger.info(
+                "verification_passed",
+                rca_id=rca_id,
+                passed=verification.passed,
+                total=verification.total_cases
+            )
+        else:
+            # Failures detected - trigger mini-RCA
+            verification.mini_rca_triggered = True
+            logger.warning(
+                "verification_failed_mini_rca",
+                rca_id=rca_id,
+                failed=verification.failed,
+                failed_cases=verification.failed_case_ids
+            )
+            
+            # Don't mark fix_verified - keeps Jira from closing
+            if record.verification_attempts >= record.max_verification_attempts:
+                record.stage = PipelineStage.FAILED
+                record.failure_reason = f"Verification failed after {record.verification_attempts} attempts"
+        
+        upsert_rca(record)
+        return verification
 
     def _rebuild_evidence(self, record: RCARecord) -> EvidenceBundle:
         """Reconstruct a minimal EvidenceBundle from the record's stored data."""

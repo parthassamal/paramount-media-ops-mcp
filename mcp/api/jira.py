@@ -37,8 +37,9 @@ class JiraIssue(BaseModel):
     status: str = Field(..., description="Current status")
     severity: str = Field(..., description="Issue severity level")
     show_name: Optional[str] = Field(None, description="Related show/content name")
-    cost_impact: Optional[float] = Field(None, description="Estimated cost impact in USD")
-    delay_days: Optional[int] = Field(None, description="Days of delay caused")
+    cost_impact: Optional[float] = Field(None, description="Estimated cost impact in USD (computed from severity × days)")
+    delay_days: Optional[int] = Field(None, description="Days since issue created (delay)")
+    team: Optional[str] = Field(None, description="Responsible team/department (derived from components)")
     created: str = Field(..., description="Creation timestamp")
     updated: str = Field(..., description="Last updated timestamp")
     assignee: Optional[str] = Field(None, description="Assigned team member")
@@ -51,10 +52,11 @@ class JiraIssue(BaseModel):
                 "key": "PROD-123",
                 "summary": "Color grading delays for Yellowstone S5",
                 "status": "In Progress",
-                "severity": "Critical",
+                "severity": "critical",
                 "show_name": "Yellowstone",
-                "cost_impact": 50000.0,
+                "cost_impact": 1500000.0,
                 "delay_days": 3,
+                "team": "Streaming Platform",
                 "created": "2025-12-15T10:00:00Z",
                 "updated": "2025-12-18T14:30:00Z",
                 "assignee": "Jane Smith",
@@ -164,6 +166,7 @@ async def get_production_issues(
                     show_name=issue.get("show", ""),
                     cost_impact=issue.get("cost_overrun", 0),
                     delay_days=issue.get("delay_days", 0),
+                    team=issue.get("team", "Engineering"),
                     created=issue.get("created", datetime.now().isoformat()),
                     updated=issue.get("updated", datetime.now().isoformat()),
                     assignee=issue.get("assignee", None),
@@ -235,6 +238,7 @@ async def get_critical_issues() -> List[JiraIssue]:
                 show_name=issue.get("show", ""),
                 cost_impact=issue.get("cost_overrun", 0),
                 delay_days=issue.get("delay_days", 0),
+                team=issue.get("team", "Engineering"),
                 created=issue.get("created", datetime.now().isoformat()),
                 updated=issue.get("updated", datetime.now().isoformat()),
                 assignee=issue.get("assignee", None),
@@ -276,6 +280,7 @@ async def get_issue(issue_key: str) -> JiraIssue:
             show_name=issue.get("show", ""),
             cost_impact=issue.get("cost_overrun", 0),
             delay_days=issue.get("delay_days", 0),
+            team=issue.get("team", "Engineering"),
             created=issue.get("created", datetime.now().isoformat()),
             updated=issue.get("updated", datetime.now().isoformat()),
             assignee=issue.get("assignee", None),
@@ -336,6 +341,7 @@ async def create_issue(request: CreateIssueRequest = Body(...)) -> JiraIssue:
             show_name=issue.get("show", ""),
             cost_impact=issue.get("cost_overrun", 0),
             delay_days=issue.get("delay_days", 0),
+            team=issue.get("team", "Engineering"),
             created=issue.get("created", datetime.now().isoformat()),
             updated=issue.get("updated", datetime.now().isoformat()),
             assignee=issue.get("assignee", None),
@@ -377,6 +383,7 @@ async def get_issues_by_show(show_name: str) -> List[JiraIssue]:
                 show_name=issue.get("show", ""),
                 cost_impact=issue.get("cost_overrun", 0),
                 delay_days=issue.get("delay_days", 0),
+                team=issue.get("team", "Engineering"),
                 created=issue.get("created", datetime.now().isoformat()),
                 updated=issue.get("updated", datetime.now().isoformat()),
                 assignee=issue.get("assignee", None),

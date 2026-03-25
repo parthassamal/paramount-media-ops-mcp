@@ -192,5 +192,79 @@ def get_review_by_rca(rca_id: str) -> Optional[ReviewItem]:
     return None
 
 
+def mark_review_expired(review_id: str) -> Optional[ReviewItem]:
+    """
+    Mark a review item as expired due to SLA breach.
+    Called by the scheduler when the 24-hour window passes.
+    """
+    conn = _get_conn()
+    row = conn.execute(
+        "SELECT data FROM review_queue WHERE review_id = ?", (review_id,)
+    ).fetchone()
+
+    if not row:
+        conn.close()
+        return None
+
+    item = ReviewItem.model_validate_json(row["data"])
+    
+    if item.status != ReviewStatus.PENDING:
+        conn.close()
+        return item  # Already processed
+    
+    item.status = ReviewStatus.EXPIRED
+    
+    conn.execute(
+        "UPDATE review_queue SET status = ?, data = ? WHERE review_id = ?",
+        (item.status.value, item.model_dump_json(), review_id)
+    )
+    conn.commit()
+    conn.close()
+
+    logger.warning("Review marked expired due to SLA breach", review_id=review_id)
+    return item
+
+
+def get_review_stats() -> dict:
+    """Get review queue statistics for monitoring."""
+    conn = _get_conn()
+    
+    stats = {
+        "pending": 0,
+        "approved": 0,
+        "rejected": 0,
+        "expired": 0,
+        "avg_review_time_hours": None
+    }
+    
+    # Count by status
+    rows = conn.execute(
+        "SELECT status, COUNT(*) as count FROM review_queue GROUP BY status"
+    ).fetchall()
+    
+    for row in rows:
+        status = row["status"]
+        if status in stats:
+            stats[status] = row["count"]
+    
+    # Calculate average review time for approved items
+    approved = conn.execute(
+        "SELECT data FROM review_queue WHERE status = 'approved'"
+    ).fetchall()
+    
+    review_times = []
+    for row in approved:
+        item = ReviewItem.model_validate_json(row["data"])
+        if item.reviewed_at and item.created_at:
+            delta = item.reviewed_at - item.created_at
+            review_times.append(delta.total_seconds() / 3600)
+    
+    if review_times:
+        stats["avg_review_time_hours"] = round(sum(review_times) / len(review_times), 2)
+    
+    conn.close()
+    return stats
+
+
 # Initialize on import
 init_review_db()

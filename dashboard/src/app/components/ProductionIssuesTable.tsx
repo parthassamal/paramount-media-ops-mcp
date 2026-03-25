@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Film, ExternalLink, Clock, DollarSign } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Film, ExternalLink, Clock, Play, Loader2, CheckCircle, AlertCircle, Clock3, XCircle } from 'lucide-react';
 
 import { API_BASE } from '../../config/api';
 
@@ -12,10 +12,36 @@ type JiraIssueApi = {
   show_name?: string;
   cost_impact?: number;
   delay_days?: number;
+  team?: string;
   created: string;
   updated: string;
   assignee?: string;
   url: string;
+};
+
+type RcaStatus = {
+  has_rca: boolean;
+  rca_id?: string;
+  stage?: string;
+  is_review_pending?: boolean;
+};
+
+type RcaStatusMap = Record<string, RcaStatus>;
+
+// Pipeline stage configuration
+const STAGE_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: typeof CheckCircle }> = {
+  intake: { label: 'Intake', color: 'text-blue-400', bgColor: 'bg-blue-500/10 border-blue-500/30', icon: Play },
+  evidence_capture: { label: 'Evidence', color: 'text-cyan-400', bgColor: 'bg-cyan-500/10 border-cyan-500/30', icon: Loader2 },
+  summarization: { label: 'AI Summary', color: 'text-purple-400', bgColor: 'bg-purple-500/10 border-purple-500/30', icon: Loader2 },
+  testrail_match: { label: 'Matching', color: 'text-indigo-400', bgColor: 'bg-indigo-500/10 border-indigo-500/30', icon: Loader2 },
+  test_generation: { label: 'Generating', color: 'text-violet-400', bgColor: 'bg-violet-500/10 border-violet-500/30', icon: Loader2 },
+  review_pending: { label: 'Review', color: 'text-amber-400', bgColor: 'bg-amber-500/10 border-amber-500/30', icon: Clock3 },
+  review_approved: { label: 'Approved', color: 'text-green-400', bgColor: 'bg-green-500/10 border-green-500/30', icon: CheckCircle },
+  review_rejected: { label: 'Rejected', color: 'text-red-400', bgColor: 'bg-red-500/10 border-red-500/30', icon: XCircle },
+  testrail_write: { label: 'Writing', color: 'text-teal-400', bgColor: 'bg-teal-500/10 border-teal-500/30', icon: Loader2 },
+  blast_radius: { label: 'Analysis', color: 'text-orange-400', bgColor: 'bg-orange-500/10 border-orange-500/30', icon: Loader2 },
+  completed: { label: 'Complete', color: 'text-green-400', bgColor: 'bg-green-500/10 border-green-500/30', icon: CheckCircle },
+  failed: { label: 'Failed', color: 'text-red-400', bgColor: 'bg-red-500/10 border-red-500/30', icon: AlertCircle },
 };
 
 type SeverityKey = 'critical' | 'high' | 'medium';
@@ -75,6 +101,63 @@ export function ProductionIssuesTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [issues, setIssues] = useState<JiraIssueApi[]>([]);
+  const [rcaStatuses, setRcaStatuses] = useState<RcaStatusMap>({});
+  const [triggeringRca, setTriggeringRca] = useState<string | null>(null);
+
+  // Fetch RCA statuses for all issues
+  const fetchRcaStatuses = useCallback(async (issueKeys: string[]) => {
+    if (issueKeys.length === 0) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/rca/status/batch?jira_keys=${issueKeys.join(',')}`);
+      if (res.ok) {
+        const data = await res.json();
+        setRcaStatuses(data.statuses || {});
+      }
+    } catch (e) {
+      console.warn('Failed to fetch RCA statuses:', e);
+    }
+  }, []);
+
+  // Trigger RCA pipeline for an issue
+  const triggerRca = useCallback(async (issue: JiraIssueApi) => {
+    setTriggeringRca(issue.key);
+    try {
+      const res = await fetch(`${API_BASE}/api/rca/pipeline/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: issue.key,
+          summary: issue.summary,
+          service: issue.team || 'streaming',
+          priority: issue.severity,
+          description: issue.summary,
+        }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        // Update local RCA status
+        setRcaStatuses(prev => ({
+          ...prev,
+          [issue.key]: {
+            has_rca: true,
+            rca_id: data.rca_id,
+            stage: data.stage,
+            is_review_pending: data.stage === 'review_pending',
+          }
+        }));
+      } else {
+        const err = await res.json();
+        console.error('RCA trigger failed:', err);
+        alert(`RCA Failed: ${err.detail || 'Unknown error'}`);
+      }
+    } catch (e) {
+      console.error('RCA trigger error:', e);
+      alert('Failed to trigger RCA pipeline');
+    } finally {
+      setTriggeringRca(null);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,7 +172,14 @@ export function ProductionIssuesTable() {
         }
         const data: unknown = await res.json();
         if (cancelled) return;
-        setIssues(Array.isArray(data) ? (data as JiraIssueApi[]) : []);
+        const issueList = Array.isArray(data) ? (data as JiraIssueApi[]) : [];
+        setIssues(issueList);
+        
+        // Fetch RCA statuses for all issues
+        const keys = issueList.map(i => i.key).filter(Boolean);
+        if (keys.length > 0) {
+          fetchRcaStatuses(keys);
+        }
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : 'Failed to load issues');
@@ -103,7 +193,7 @@ export function ProductionIssuesTable() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [fetchRcaStatuses]);
 
   const handleOpenIssue = (url: string) => {
     if (!url) return;
@@ -159,7 +249,7 @@ export function ProductionIssuesTable() {
                 Severity
               </th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Show Name
+                Issue
               </th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Status
@@ -168,10 +258,13 @@ export function ProductionIssuesTable() {
                 Cost Impact
               </th>
               <th className="text-right py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Days Delayed
+                Days Open
               </th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Department
+                Team
+              </th>
+              <th className="text-center py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                RCA Pipeline
               </th>
               <th className="text-right py-3 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                 Action
@@ -182,7 +275,7 @@ export function ProductionIssuesTable() {
             {loading &&
               [0, 1, 2, 3, 4].map((i) => (
                 <tr key={`sk-${i}`} className="border-b border-slate-800/50">
-                  <td colSpan={7} className="py-4 px-4">
+                  <td colSpan={8} className="py-4 px-4">
                     <div className="h-10 w-full animate-pulse rounded bg-slate-800/80" />
                   </td>
                 </tr>
@@ -198,13 +291,16 @@ export function ProductionIssuesTable() {
                     : issue.key || issue.id;
                 const priority = extractPriority(issue.summary);
                 const narrative = stripPriorityPrefix(issue.summary);
-                const dept = issue.assignee?.trim() || '—';
+                const team = issue.team || '—';
+                const rcaStatus = rcaStatuses[issue.key];
+                const stageConfig = rcaStatus?.stage ? STAGE_CONFIG[rcaStatus.stage] : null;
+                const StageIcon = stageConfig?.icon || Play;
+                const isTriggering = triggeringRca === issue.key;
 
                 return (
                   <tr
                     key={issue.key || issue.id}
-                    onClick={() => handleOpenIssue(issue.url)}
-                    className={`border-b border-slate-800/50 hover:bg-slate-800/30 cursor-pointer transition-colors group`}
+                    className={`border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors group`}
                   >
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
@@ -220,7 +316,10 @@ export function ProductionIssuesTable() {
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-2">
                         <Film className="w-4 h-4 text-slate-500" />
-                        <span className="font-medium text-white">{showLabel}</span>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-white">{showLabel}</span>
+                          <span className="text-xs text-slate-500">{issue.key}</span>
+                        </div>
                       </div>
                     </td>
                     <td className="py-4 px-4">
@@ -228,16 +327,13 @@ export function ProductionIssuesTable() {
                         <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">
                           {issue.status}
                         </span>
-                        <span className="text-sm text-slate-400">{narrative}</span>
+                        <span className="text-sm text-slate-400 line-clamp-2">{narrative}</span>
                       </div>
                     </td>
                     <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <DollarSign className="w-4 h-4 text-red-400" />
-                        <span className="font-bold text-red-400">
-                          {formatCostUsd(issue.cost_impact)}
-                        </span>
-                      </div>
+                      <span className="font-bold text-red-400">
+                        {formatCostUsd(issue.cost_impact)}
+                      </span>
                     </td>
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
@@ -248,20 +344,56 @@ export function ProductionIssuesTable() {
                       </div>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="text-sm text-slate-400">{dept}</span>
+                      <span className="text-sm text-slate-400">{team}</span>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      {rcaStatus?.has_rca && stageConfig ? (
+                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${stageConfig.bgColor}`}>
+                          <StageIcon className={`w-3 h-3 ${stageConfig.color} ${stageConfig.icon === Loader2 ? 'animate-spin' : ''}`} />
+                          <span className={`text-xs font-medium ${stageConfig.color}`}>
+                            {stageConfig.label}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-600">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-4 text-right">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-[#0064FF]/10 border border-[#0064FF]/30 rounded-lg text-xs font-medium text-[#0064FF] hover:bg-[#0064FF]/20 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenIssue(issue.url);
-                        }}
-                      >
-                        {issue.key}
-                        <ExternalLink className="w-3 h-3" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {!rcaStatus?.has_rca && (
+                          <button
+                            type="button"
+                            disabled={isTriggering}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-500/10 border border-green-500/30 rounded-lg text-xs font-medium text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerRca(issue);
+                            }}
+                          >
+                            {isTriggering ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Running...
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-3 h-3" />
+                                Run RCA
+                              </>
+                            )}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-[#0064FF]/10 border border-[#0064FF]/30 rounded-lg text-xs font-medium text-[#0064FF] hover:bg-[#0064FF]/20 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenIssue(issue.url);
+                          }}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -269,7 +401,7 @@ export function ProductionIssuesTable() {
 
             {!loading && issues.length === 0 && !error && (
               <tr>
-                <td colSpan={7} className="py-8 text-center text-sm text-slate-500">
+                <td colSpan={8} className="py-8 text-center text-sm text-slate-500">
                   No production issues returned from Jira.
                 </td>
               </tr>

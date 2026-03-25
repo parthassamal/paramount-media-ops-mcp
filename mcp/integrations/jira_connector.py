@@ -206,6 +206,59 @@ class JiraConnector:
         
         return ' AND '.join(conditions) if conditions else ''
     
+    # Team mapping from components/labels to department names
+    COMPONENT_TO_TEAM = {
+        "streaming": "Streaming Platform",
+        "playback": "Streaming Platform",
+        "video": "Streaming Platform",
+        "cdn": "Infrastructure",
+        "infrastructure": "Infrastructure",
+        "backend": "Backend Services",
+        "api": "Backend Services",
+        "auth": "Identity & Access",
+        "authentication": "Identity & Access",
+        "billing": "Commerce",
+        "subscription": "Commerce",
+        "payment": "Commerce",
+        "mobile": "Mobile Apps",
+        "ios": "Mobile Apps",
+        "android": "Mobile Apps",
+        "web": "Web Platform",
+        "frontend": "Web Platform",
+        "content": "Content Operations",
+        "metadata": "Content Operations",
+        "search": "Discovery",
+        "recommendation": "Discovery",
+        "analytics": "Data & Analytics",
+        "data": "Data & Analytics",
+    }
+    
+    # Revenue impact per severity per day (enterprise streaming model)
+    SEVERITY_DAILY_IMPACT = {
+        "critical": 500000,  # $500K/day for critical streaming outages
+        "high": 150000,      # $150K/day for high priority
+        "medium": 25000,     # $25K/day for medium
+        "low": 5000          # $5K/day for low
+    }
+    
+    def _map_component_to_team(self, components: List[str], labels: List[str]) -> str:
+        """Map Jira components/labels to a team department name."""
+        # Check components first
+        for comp in components:
+            comp_lower = comp.lower()
+            for key, team in self.COMPONENT_TO_TEAM.items():
+                if key in comp_lower:
+                    return team
+        
+        # Then check labels
+        for label in labels:
+            label_lower = label.lower()
+            for key, team in self.COMPONENT_TO_TEAM.items():
+                if key in label_lower:
+                    return team
+        
+        return "Engineering"  # Default team
+    
     def _parse_issue(self, jira_issue: Dict[str, Any]) -> Dict[str, Any]:
         """
         Parse JIRA issue into standardized format.
@@ -214,20 +267,20 @@ class JiraConnector:
             jira_issue: Raw JIRA issue from API
         
         Returns:
-            Standardized issue dictionary
+            Standardized issue dictionary with computed business metrics
         """
         fields = jira_issue.get("fields", {})
         
-        # Extract custom fields
-        cost_overrun = 0
-        delay_days = 0
+        # Extract custom fields (may be empty/null in most instances)
+        cost_overrun_explicit = 0
+        delay_days_explicit = 0
         show_name = ""
         
         if self.cf_cost_impact and self.cf_cost_impact in fields:
-            cost_overrun = fields.get(self.cf_cost_impact) or 0
+            cost_overrun_explicit = fields.get(self.cf_cost_impact) or 0
         
         if self.cf_delay_days and self.cf_delay_days in fields:
-            delay_days = fields.get(self.cf_delay_days) or 0
+            delay_days_explicit = fields.get(self.cf_delay_days) or 0
         
         if self.cf_show_name and self.cf_show_name in fields:
             show_name = fields.get(self.cf_show_name) or ""
@@ -243,17 +296,42 @@ class JiraConnector:
         }
         severity = severity_map.get(priority, "medium")
         
-        # Calculate days open
+        # Calculate days open (this becomes delay_days if not explicitly set)
+        # Use ceiling of hours/24 to count partial days (issue open for 3 hours = 1 day)
         created = fields.get("created", "")
         days_open = 0
+        hours_open = 0
         if created:
             try:
                 created_date = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                days_open = (datetime.now(created_date.tzinfo) - created_date).days
+                delta = datetime.now(created_date.tzinfo) - created_date
+                hours_open = delta.total_seconds() / 3600
+                # Count partial days: 0-24h = 1 day, 24-48h = 2 days, etc.
+                days_open = max(1, int((hours_open + 23) / 24)) if hours_open > 0 else 0
             except (ValueError, TypeError):
                 pass
         
-        # Estimate revenue at risk (simplified model)
+        # Use explicit delay_days if set, otherwise compute from days_open
+        delay_days = delay_days_explicit if delay_days_explicit > 0 else days_open
+        
+        # Extract components and labels for team mapping
+        components = [c.get("name", "") for c in fields.get("components", [])]
+        labels = fields.get("labels", [])
+        
+        # Map to team/department
+        team = self._map_component_to_team(components, labels)
+        
+        # Compute cost impact if not explicitly set
+        # Model: severity-based daily rate × days open
+        if cost_overrun_explicit > 0:
+            cost_overrun = cost_overrun_explicit
+        else:
+            daily_rate = self.SEVERITY_DAILY_IMPACT.get(severity, 25000)
+            # Cap at reasonable maximums and apply diminishing returns after 7 days
+            effective_days = min(days_open, 7) + max(0, days_open - 7) * 0.3
+            cost_overrun = int(daily_rate * effective_days)
+        
+        # Estimate revenue at risk (total business impact including downstream)
         revenue_at_risk = int(cost_overrun * 1.5 + delay_days * 50000)
         
         return {
@@ -268,12 +346,13 @@ class JiraConnector:
             "delay_days": delay_days,
             "revenue_at_risk": revenue_at_risk,
             "days_open": days_open,
+            "team": team,  # NEW: Computed team/department
             "assignee": fields.get("assignee", {}).get("displayName", "Unassigned") if fields.get("assignee") else "Unassigned",
             "reporter": fields.get("reporter", {}).get("displayName", "Unknown") if fields.get("reporter") else "Unknown",
             "created": created,
             "updated": fields.get("updated", ""),
-            "labels": fields.get("labels", []),
-            "components": [c.get("name", "") for c in fields.get("components", [])],
+            "labels": labels,
+            "components": components,
             "jira_url": f"{self.api_url}/browse/{jira_issue.get('key', '')}"
         }
     

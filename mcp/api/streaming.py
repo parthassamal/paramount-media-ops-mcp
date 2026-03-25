@@ -5,6 +5,7 @@ Provides Quality of Experience metrics, APM data, and infrastructure health.
 """
 
 from typing import Optional, List, Dict, Any
+import asyncio
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -93,10 +94,11 @@ async def get_qoe_metrics(
         else:
             time_range_str = "last_30_days"
             
-        metrics_data = conviva.get_qoe_metrics(
-            time_range=time_range_str,
-            dimension=dimension,
-            content_filter=content_id
+        metrics_data = await asyncio.to_thread(
+            conviva.get_qoe_metrics,
+            time_range_str,
+            dimension,
+            content_id
         )
         
         # Convert to API model
@@ -167,7 +169,7 @@ async def get_buffering_hotspots(
         else:
             time_range_str = "last_30_days"
             
-        return conviva.get_buffering_hotspots(time_range=time_range_str)
+        return await asyncio.to_thread(conviva.get_buffering_hotspots, time_range_str)
     except Exception as e:
         logger.error("buffering_hotspots_failed", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to analyze buffering: {str(e)}")

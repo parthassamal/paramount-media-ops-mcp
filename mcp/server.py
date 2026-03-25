@@ -39,6 +39,7 @@ from mcp.tools import (
 )
 from mcp.api import jira_router, confluence_router, analytics_router, streaming_router, figma_router, adobe_router, ai_router, rca_router
 from mcp.api.events import router as events_router
+from mcp.api.phase2_tools import router as phase2_router
 
 # Configure structured logging
 structlog.configure(
@@ -105,6 +106,14 @@ async def lifespan(app: FastAPI):
     RESOURCES = _initialize_resources()
     TOOLS = _initialize_tools()
     
+    # Start background scheduler for SLA checks, proactive monitoring, etc.
+    try:
+        from mcp.scheduler.background_tasks import start_scheduler, scheduler
+        start_scheduler()
+        logger.info("scheduler_started", jobs=len(scheduler.get_job_status().get("jobs", [])))
+    except Exception as e:
+        logger.warning("scheduler_start_failed", error=str(e))
+    
     logger.info(
         "server_ready",
         resources_count=len(RESOURCES),
@@ -114,6 +123,12 @@ async def lifespan(app: FastAPI):
     yield  # Application runs here
     
     # Shutdown
+    try:
+        from mcp.scheduler.background_tasks import stop_scheduler
+        stop_scheduler()
+    except Exception as e:
+        logger.warning("scheduler_stop_failed", error=str(e))
+    
     logger.info("server_shutting_down")
 
 
@@ -398,6 +413,7 @@ app.include_router(figma_router)
 app.include_router(adobe_router)
 app.include_router(ai_router)  # Patent-worthy AI services
 app.include_router(rca_router)  # RCA Pipeline v2
+app.include_router(phase2_router)  # Phase 2 QA Intelligence
 app.include_router(events_router)  # SSE real-time events
 
 # Custom Swagger UI with styling
