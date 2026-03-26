@@ -11,6 +11,9 @@ import { LoginScreen } from "./components/LoginScreen";
 import { HelpModal } from "./components/HelpModal";
 import { PipelineStatusPage, RcaArtifactsPage } from "./components/phase1";
 import { IntegrationsPage } from "./components/system";
+import { MissionControlPage } from "./components/mission/MissionControlPage";
+import { IncidentDetailPage } from "./components/mission/IncidentDetailPage";
+import { GovernancePanel } from "./components/mission/GovernancePanel";
 import {
   TestImpactPage,
   FailureTriagePage,
@@ -35,7 +38,8 @@ function AppContent() {
   const [isFigmaLive, setIsFigmaLive] = useState(false);
   const [figmaHeroImage, setFigmaHeroImage] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState("dashboard");
+  const [currentPage, setCurrentPage] = useState("mission-control");
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem("paramount_user");
     return saved ? JSON.parse(saved) : null;
@@ -48,14 +52,16 @@ function AppContent() {
     pendingReview: 0,
     hygieneFlags: 0,
     patternsDetected: 0,
+    governancePending: 0,
   });
 
   // Fetch counts for badges
   const fetchCounts = useCallback(async () => {
     try {
-      const [issuesRes, reviewRes] = await Promise.all([
+      const [issuesRes, reviewRes, govRes] = await Promise.all([
         fetch(`${API_BASE}/api/jira/issues`),
         fetch(`${API_BASE}/api/rca/review/pending`),
+        fetch(`${API_BASE}/api/governance/stats`).catch(() => null),
       ]);
 
       if (issuesRes.ok) {
@@ -75,6 +81,14 @@ function AppContent() {
         setCounts((prev) => ({
           ...prev,
           pendingReview: reviews.pending?.length || 0,
+        }));
+      }
+
+      if (govRes && govRes.ok) {
+        const govStats = await govRes.json();
+        setCounts((prev) => ({
+          ...prev,
+          governancePending: govStats.awaiting_review || 0,
         }));
       }
     } catch (error) {
@@ -153,13 +167,19 @@ function AppContent() {
 
   const handleExportPDF = async () => {
     try {
-      const [healthRes, issuesRes] = await Promise.all([
+      const [healthRes, issuesRes, missionRes, govRes, reviewRes] = await Promise.all([
         fetch(`${API_BASE}/health`),
         fetch(`${API_BASE}/api/jira/issues`),
+        fetch(`${API_BASE}/api/mission-control/summary`).catch(() => null),
+        fetch(`${API_BASE}/api/governance/stats`).catch(() => null),
+        fetch(`${API_BASE}/api/rca/review/pending`).catch(() => null),
       ]);
 
       const health = healthRes.ok ? await healthRes.json() : {};
       const issues = issuesRes.ok ? await issuesRes.json() : [];
+      const mission = missionRes?.ok ? await missionRes.json() : null;
+      const govStats = govRes?.ok ? await govRes.json() : null;
+      const reviewData = reviewRes?.ok ? await reviewRes.json() : null;
 
       const liveIntegrations = health.integrations
         ? Object.values(health.integrations).filter((i: any) => i?.status === "live").length
@@ -171,6 +191,11 @@ function AppContent() {
       const highIssues = issues.filter(
         (i: any) => i.severity === "high" || /\bP2\b/i.test(i.summary)
       ).length;
+      const totalCost = issues.reduce((s: number, i: any) => s + (i.cost_impact ?? 0), 0);
+
+      const topIncident = mission?.top_incident;
+      const pendingReviews = reviewData?.count ?? 0;
+      const pendingApprovals = govStats?.awaiting_review ?? 0;
 
       const dashboardSnapshot = {
         metrics: {
@@ -178,16 +203,32 @@ function AppContent() {
           "Critical Issues": String(criticalIssues),
           "High Priority Issues": String(highIssues),
           "Live Integrations": String(liveIntegrations),
-          "Avg Resolution Time": "1.2h",
-          "Revenue at Risk": `$${(criticalIssues * 500000 + highIssues * 200000).toLocaleString()}`,
+          "Revenue at Risk": totalCost > 0 ? `$${totalCost.toLocaleString()}` : `$${(criticalIssues * 500000 + highIssues * 200000).toLocaleString()}`,
+          "Pending RCA Reviews": String(pendingReviews),
+          "Pending Governance Approvals": String(pendingApprovals),
+          "System Mode": mission?.system_mode ?? "unknown",
         },
-        insights: issues.slice(0, 5).map((i: any) => `[${i.key}] ${i.summary} (${i.status})`),
+        insights: issues.slice(0, 8).map((i: any) => `[${i.id || i.key}] ${i.summary} — ${i.severity} — $${(i.cost_impact ?? 0).toLocaleString()} (${i.status})`),
+        top_incident: topIncident ? {
+          id: topIncident.incident_id,
+          summary: topIncident.summary,
+          priority_score: topIncident.priority_score,
+          top_action: topIncident.top_action,
+        } : null,
+        governance: {
+          total_reviews: govStats?.total ?? 0,
+          awaiting_review: pendingApprovals,
+          approved: govStats?.approved ?? 0,
+          rejected: govStats?.rejected ?? 0,
+        },
         recommendations: [
           criticalIssues > 0
             ? `Immediate attention needed for ${criticalIssues} critical issue(s)`
             : "No critical issues - maintain current monitoring",
           `${liveIntegrations} integrations connected and reporting live data`,
-          "Run RCA pipeline on unresolved critical issues for root cause analysis",
+          pendingReviews > 0 ? `${pendingReviews} RCA review(s) pending human approval (24h SLA)` : "All RCA reviews processed",
+          pendingApprovals > 0 ? `${pendingApprovals} governance approval(s) awaiting action` : "No pending governance approvals",
+          topIncident ? `Top priority: ${topIncident.incident_id} — recommended action: ${topIncident.top_action || "review"}` : "No active high-priority incidents",
         ],
         timestamp: new Date().toISOString(),
         figma_sync: isFigmaLive,
@@ -225,6 +266,38 @@ function AppContent() {
   // Render page content based on current page
   const renderPageContent = () => {
     switch (currentPage) {
+      case "mission-control":
+        return (
+          <MissionControlPage
+            onNavigateToIncident={(id: string) => {
+              setSelectedIncidentId(id);
+              setCurrentPage("incident-detail");
+            }}
+          />
+        );
+
+      case "incident-detail":
+        return selectedIncidentId ? (
+          <IncidentDetailPage
+            incidentId={selectedIncidentId}
+            onBack={() => setCurrentPage("mission-control")}
+          />
+        ) : (
+          <MissionControlPage
+            onNavigateToIncident={(id: string) => {
+              setSelectedIncidentId(id);
+              setCurrentPage("incident-detail");
+            }}
+          />
+        );
+
+      case "governance":
+        return (
+          <div className="max-w-4xl">
+            <GovernancePanel />
+          </div>
+        );
+
       case "dashboard":
         return (
           <div className="space-y-6">
@@ -300,6 +373,9 @@ function AppContent() {
 
   const getPageTitle = () => {
     const titles: Record<string, string> = {
+      "mission-control": "Mission Control",
+      "incident-detail": "Incident Detail",
+      governance: "Governance & Approvals",
       dashboard: "Dashboard",
       "ai-insights": "AI Insights",
       "production-issues": "Production Issues",
@@ -315,12 +391,12 @@ function AppContent() {
       effectiveness: "Test Effectiveness",
       integrations: "Integrations",
     };
-    return titles[currentPage] || "Dashboard";
+    return titles[currentPage] || "Mission Control";
   };
 
   return (
     <div className={darkMode ? "dark min-h-screen" : "min-h-screen"}>
-      <div className="min-h-screen bg-[#0A0E1A] text-slate-100 flex">
+      <div className="min-h-screen bg-background text-foreground flex">
         {/* Sidebar */}
         <Sidebar
           currentPage={currentPage}
@@ -333,11 +409,11 @@ function AppContent() {
         {/* Main Content Area */}
         <div className="flex-1 ml-64">
           {/* Header */}
-          <header className="border-b border-slate-800 bg-[#0D1117] backdrop-blur-sm sticky top-0 z-30 shadow-lg">
+          <header className="border-b border-border bg-card backdrop-blur-sm sticky top-0 z-30 shadow-lg">
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <h1 className="text-xl font-bold text-white">{getPageTitle()}</h1>
+                  <h1 className="text-xl font-bold text-foreground">{getPageTitle()}</h1>
                   {isFigmaLive && (
                     <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 border border-blue-500/30 rounded text-[10px] text-blue-400 uppercase tracking-widest">
                       <Palette size={10} />
@@ -357,7 +433,7 @@ function AppContent() {
                   </div>
 
                   {/* Last Updated */}
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <RefreshCw className="w-3 h-3" />
                     {lastUpdated.toLocaleTimeString()}
                   </div>
@@ -374,7 +450,7 @@ function AppContent() {
                   {/* Dark Mode Toggle */}
                   <button
                     onClick={() => setDarkMode(!darkMode)}
-                    className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-all"
+                    className="p-2 rounded-lg bg-muted hover:bg-accent transition-all"
                     aria-label="Toggle dark mode"
                   >
                     {darkMode ? (
@@ -392,9 +468,9 @@ function AppContent() {
           <main className="p-6">{renderPageContent()}</main>
 
           {/* Footer */}
-          <footer className="border-t border-slate-800 py-4 px-6">
-            <div className="text-center text-xs text-slate-500">
-              Paramount+ AI Operations Dashboard • Built for AI Hackathon • Real-time monitoring &
+          <footer className="border-t border-border py-4 px-6">
+            <div className="text-center text-xs text-muted-foreground">
+              Paramount+ AI Operations Dashboard &bull; Built for AI Hackathon &bull; Real-time monitoring &amp;
               predictive analytics
             </div>
           </footer>

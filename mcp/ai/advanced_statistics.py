@@ -4,7 +4,7 @@ Advanced Statistical Methods for Time-Series and Survival Analysis.
 Implements ARIMA forecasting, VAR models for causality, and survival analysis
 for subscriber lifetime predictions.
 
-Patent-worthy features:
+Key features:
 - Multi-variate time-series causality detection (VAR + Granger)
 - Survival analysis for churn prediction with hazard ratios
 - ARIMA forecasting with confidence intervals

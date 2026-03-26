@@ -42,6 +42,7 @@ interface SidebarProps {
     pendingReview: number;
     hygieneFlags: number;
     patternsDetected: number;
+    governancePending?: number;
   };
 }
 
@@ -49,7 +50,8 @@ const navSections: { title: string; items: NavItem[] }[] = [
   {
     title: "Overview",
     items: [
-      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "mission-control", label: "Mission Control", icon: Shield },
+      { id: "dashboard", label: "Operations Overview", icon: LayoutDashboard },
       { id: "ai-insights", label: "AI Insights", icon: Brain },
     ],
   },
@@ -58,6 +60,7 @@ const navSections: { title: string; items: NavItem[] }[] = [
     items: [
       { id: "production-issues", label: "Production Issues", icon: AlertTriangle },
       { id: "review-queue", label: "Review Queue", icon: ClipboardCheck },
+      { id: "governance", label: "Governance", icon: Shield },
       { id: "pipeline-status", label: "Pipeline Status", icon: GitBranch },
       { id: "rca-artifacts", label: "RCA Artifacts", icon: FileText },
     ],
@@ -101,6 +104,10 @@ export function Sidebar({ currentPage, onNavigate, onLogout, user, counts }: Sid
         return counts.totalIssues > 0
           ? { count: counts.totalIssues, color: "bg-slate-600" }
           : null;
+      case "mission-control":
+        return counts.criticalInsights > 0
+          ? { count: counts.criticalInsights, color: "bg-red-500" }
+          : null;
       case "ai-insights":
         return counts.criticalInsights > 0
           ? { count: counts.criticalInsights, color: "bg-red-500" }
@@ -117,33 +124,37 @@ export function Sidebar({ currentPage, onNavigate, onLogout, user, counts }: Sid
         return counts.patternsDetected > 0
           ? { count: counts.patternsDetected, color: "bg-purple-500" }
           : null;
+      case "governance":
+        return (counts.governancePending ?? 0) > 0
+          ? { count: counts.governancePending!, color: "bg-amber-500" }
+          : null;
       default:
         return null;
     }
   };
 
   return (
-    <aside className="w-64 h-screen bg-[#0a0e14] border-r border-slate-800 flex flex-col fixed left-0 top-0 z-40">
+    <aside className="w-64 h-screen bg-card border-r border-border flex flex-col fixed left-0 top-0 z-40">
       {/* Logo */}
-      <div className="p-4 border-b border-slate-800">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0064FF] to-purple-600 flex items-center justify-center">
             <Shield className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-white">Paramount+</h1>
-            <p className="text-xs text-slate-500">AI Operations</p>
+            <h1 className="text-sm font-bold text-foreground">Paramount+</h1>
+            <p className="text-xs text-muted-foreground">AI Operations</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3">
+      <nav className="flex-1 overflow-y-auto py-4 px-3 pb-8">
         {navSections.map((section) => (
           <div key={section.title} className="mb-4">
             <button
               onClick={() => toggleSection(section.title)}
-              className="flex items-center justify-between w-full px-2 py-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hover:text-slate-400 transition-colors"
+              className="flex items-center justify-between w-full px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
             >
               <span>{section.title}</span>
               {expandedSections.includes(section.title) ? (
@@ -169,8 +180,8 @@ export function Sidebar({ currentPage, onNavigate, onLogout, user, counts }: Sid
                         transition-all duration-150
                         ${
                           isActive
-                            ? "bg-[#0064FF]/20 text-[#0064FF] font-medium"
-                            : "text-slate-400 hover:bg-slate-800/50 hover:text-white"
+                            ? "bg-primary/20 text-primary font-medium"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
                         }
                       `}
                     >
@@ -198,34 +209,32 @@ export function Sidebar({ currentPage, onNavigate, onLogout, user, counts }: Sid
       </nav>
 
       {/* User Profile & Logout */}
-      <div className="p-3 border-t border-slate-800">
+      <div className="shrink-0 p-3 border-t border-border">
         {user ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 px-2">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-semibold text-sm">
-                {user.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user.name}</p>
-                <p className="text-xs text-slate-500 truncate">{user.email}</p>
-              </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-semibold text-xs shrink-0">
+              {user.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
             </div>
             <button
               onClick={onLogout}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+              className="shrink-0 p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+              title="Sign out"
             >
               <LogOut className="w-4 h-4" />
-              <span>Sign out</span>
             </button>
           </div>
         ) : (
           <button
             onClick={() => onNavigate("login")}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign in</span>

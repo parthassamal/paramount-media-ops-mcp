@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # AI Models Installation Script
-# Downloads and initializes all required AI models for patent-worthy MCP server
+# Downloads and initializes all required AI models for enterprise-grade MCP server
 
 set -e  # Exit on error
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Film, ExternalLink, Clock, Play, Loader2, CheckCircle, AlertCircle, Clock3, XCircle } from 'lucide-react';
 
 import { API_BASE } from '../../config/api';
+import { Pagination, usePagination } from './ui/Pagination';
 
 type JiraIssueApi = {
   id: string;
@@ -103,6 +104,8 @@ export function ProductionIssuesTable() {
   const [issues, setIssues] = useState<JiraIssueApi[]>([]);
   const [rcaStatuses, setRcaStatuses] = useState<RcaStatusMap>({});
   const [triggeringRca, setTriggeringRca] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Fetch RCA statuses for all issues
   const fetchRcaStatuses = useCallback(async (issueKeys: string[]) => {
@@ -282,7 +285,7 @@ export function ProductionIssuesTable() {
               ))}
 
             {!loading &&
-              issues.map((issue) => {
+              usePagination(issues, pageSize, page).map((issue) => {
                 const sev = mapSeverity(issue.severity);
                 const config = severityConfig[sev];
                 const showLabel =
@@ -409,6 +412,16 @@ export function ProductionIssuesTable() {
           </tbody>
         </table>
       </div>
+
+      {!loading && issues.length > 0 && (
+        <Pagination
+          currentPage={page}
+          totalItems={issues.length}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
 
       {/* Summary Footer */}
       <div className="mt-6 pt-6 border-t border-slate-800">

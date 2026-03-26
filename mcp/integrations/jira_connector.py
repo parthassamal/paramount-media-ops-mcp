@@ -507,18 +507,18 @@ class JiraConnector:
         
         try:
             response = await self._make_request(
-                method="GET",
-                endpoint="/rest/api/3/search",
-                params={
+                method="POST",
+                endpoint="/rest/api/3/search/jql",
+                data={
                     "jql": jql,
                     "maxResults": limit,
-                    "fields": ",".join([
+                    "fields": [
                         "summary", "description", "status", "priority",
                         "assignee", "reporter", "created", "updated",
                         "labels", "components",
-                        self.cf_cost_impact, self.cf_delay_days, self.cf_show_name
-                    ])
-                }
+                        self.cf_cost_impact, self.cf_delay_days, self.cf_show_name,
+                    ],
+                },
             )
             
             issues = [

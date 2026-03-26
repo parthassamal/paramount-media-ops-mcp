@@ -4,7 +4,7 @@ Bayesian Analytics for Uncertain Predictions and Causal Analysis.
 Uses PyMC for Bayesian inference to provide probabilistic predictions
 with uncertainty quantification.
 
-Patent-worthy features:
+Key features:
 - Bayesian churn prediction with credible intervals
 - Causal impact analysis for A/B tests and interventions
 - Hierarchical models for multi-level data

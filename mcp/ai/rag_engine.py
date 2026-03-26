@@ -52,7 +52,7 @@ class RAGEngine:
     """
     RAG pipeline for operational knowledge base.
     
-    Patent-worthy features:
+    Key features:
     - Hybrid retrieval combining dense embeddings + BM25 sparse search
     - Cross-source semantic search (Confluence + JIRA + Logs)
     - Context-aware re-ranking based on recency and relevance

@@ -4,7 +4,7 @@ Workflow Automation using LangGraph State Machines.
 Implements automated workflows for production issue resolution,
 escalation, and monitoring using state machine patterns.
 
-Patent-worthy features:
+Key features:
 - Self-healing production pipeline with state tracking
 - Automated escalation based on confidence thresholds
 - Parallel workflow execution for independent tasks

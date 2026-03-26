@@ -5,7 +5,7 @@ description: Expert guidance for Paramount+ AI Operations platform. Use when wor
 
 # Paramount AI Operations Skill
 
-Comprehensive guidance for working with the patent-worthy AI/ML system built for Paramount+ streaming operations.
+Comprehensive guidance for working with the advanced AI/ML system built for Paramount+ streaming operations.
 
 ## When to Use
 
@@ -232,11 +232,11 @@ rm -rf chroma_db/
 - **40+ libraries**: State-of-the-art open-source ML stack
 - **<100ms inference**: Optimized for production speed
 - **Unlimited scale**: No rate limits or API costs
-- **6 patent claims**: Novel algorithms and system combinations
+- **6 novel algorithms**: Novel algorithms and system combinations
 
 ## Documentation
 
-- See `README.md` for patent-worthy AI section
+- See `README.md` for advanced AI section
 - See `ERROR_HANDLING_SUMMARY.md` for error handling guide
 - See `IMPLEMENTATION_COMPLETE.md` for full feature documentation
 - See `/docs` endpoint for interactive API documentation

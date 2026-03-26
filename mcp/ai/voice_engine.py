@@ -4,7 +4,7 @@ Voice AI Engine for Speech Intelligence.
 Uses Whisper for automatic speech recognition (ASR) and Coqui TTS
 for text-to-speech generation.
 
-Patent-worthy features:
+Key features:
 - Real-time support call transcription and sentiment analysis
 - Voice-enabled production alerts with priority-based TTS
 - Automatic complaint keyword extraction from voice

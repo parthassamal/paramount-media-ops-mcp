@@ -110,10 +110,9 @@ class OperationalEfficiencyResource:
         """Calculate resource utilization metrics."""
         issues = self.jira.get_production_issues(limit=1000)
         
-        # Analyze team assignments
         team_workload = {}
         for issue in issues:
-            team = issue["assigned_team"]
+            team = issue.get("assigned_team") or issue.get("team") or "Unassigned"
             if team not in team_workload:
                 team_workload[team] = {
                     "issue_count": 0,
@@ -145,8 +144,10 @@ class OperationalEfficiencyResource:
         issues = self.jira.get_production_issues(limit=1000)
         
         # Quality indicators
-        rework_issues = [i for i in issues if "rewrites" in i["root_cause"].lower() or "redesign" in i["root_cause"].lower()]
-        vendor_issues = [i for i in issues if "vendor" in i["root_cause"].lower() or "third-party" in i["root_cause"].lower()]
+        def _cause_text(i: Dict[str, Any]) -> str:
+            return str(i.get("root_cause") or i.get("ai_summary") or i.get("description") or "").lower()
+        rework_issues = [i for i in issues if "rewrites" in _cause_text(i) or "redesign" in _cause_text(i)]
+        vendor_issues = [i for i in issues if "vendor" in _cause_text(i) or "third-party" in _cause_text(i)]
         
         # Calculate quality score (inverse of issues)
         quality_score = 100 - (len(rework_issues) / len(issues) * 100) if issues else 100
@@ -251,7 +252,7 @@ class OperationalEfficiencyResource:
         issues = self.jira.get_production_issues(limit=1000)
         
         if team_name:
-            team_issues = [i for i in issues if i["assigned_team"] == team_name]
+            team_issues = [i for i in issues if (i.get("assigned_team") or i.get("team") or "") == team_name]
             if not team_issues:
                 return {"error": f"No issues found for team: {team_name}"}
             

@@ -1,7 +1,7 @@
 """
 AI-powered intelligence layer for Paramount+ Media Operations.
 
-Patent-worthy AI stack with zero external API dependencies:
+Enterprise-grade AI stack with zero external API dependencies:
 - RAG pipeline for operational knowledge (ChromaDB + LangChain)
 - Multi-agent systems for autonomous issue resolution (AutoGen/CrewAI)
 - Computer vision for content intelligence (CLIP + YOLO)
@@ -20,7 +20,7 @@ from mcp.ai.anomaly_detector import AnomalyDetector, Anomaly
 from mcp.ai.insights_generator import AIInsightsGenerator
 from mcp.ai.predictive_analytics import PredictiveAnalytics
 
-# Advanced AI modules (patent-worthy stack)
+# Advanced AI modules (enterprise-grade stack)
 from mcp.ai.rag_engine import RAGEngine, get_rag_engine, RetrievalResult
 from mcp.ai.multi_agent_system import (
     ProductionIssueResolver,

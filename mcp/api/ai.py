@@ -1,7 +1,7 @@
 """
 FastAPI endpoints for advanced AI services.
 
-Exposes all patent-worthy AI capabilities via REST API:
+Exposes all advanced AI capabilities via REST API:
 - RAG semantic search
 - Multi-agent issue resolution
 - Computer vision content analysis

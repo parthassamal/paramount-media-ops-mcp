@@ -1,0 +1,42 @@
+{
+  "id": "PROD-GOLDEN-1001",
+  "summary": "Login failures spike after auth deployment",
+  "service": "auth-service",
+  "priority": "Critical",
+  "severity": "critical",
+  "status": "In Progress",
+  "team": "Identity Platform",
+  "cost_impact": 1250000,
+  "delay_days": 2,
+  "revenue_at_risk": 2100000,
+  "affected_subscribers": 180000,
+  "impacted_services": [
+    "auth-service",
+    "session-service",
+    "profile-api"
+  ],
+  "affected_endpoints": [
+    "/v1/login",
+    "/v1/session/refresh"
+  ],
+  "timeline_events": [
+    {
+      "timestamp": "2026-01-28T09:00:00Z",
+      "source": "newrelic",
+      "event_type": "alert_opened",
+      "summary": "Auth error rate breached threshold"
+    },
+    {
+      "timestamp": "2026-01-28T09:04:00Z",
+      "source": "jira",
+      "event_type": "ticket_created",
+      "summary": "PROD-GOLDEN-1001 opened by on-call"
+    },
+    {
+      "timestamp": "2026-01-28T09:15:00Z",
+      "source": "pipeline",
+      "event_type": "stage_transition",
+      "summary": "Evidence captured"
+    }
+  ]
+}

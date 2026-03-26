@@ -215,7 +215,7 @@ class AlertTestGenRequest(BaseModel):
 
 
 @router.post("/alert-tests/generate")
-async def api_generate_alert_tests(request: AlertTestGenRequest):
+async def api_generate_alert_tests(request: AlertTestGenRequest = AlertTestGenRequest()):
     """
     2.6 Generate Tests from Alerts
     

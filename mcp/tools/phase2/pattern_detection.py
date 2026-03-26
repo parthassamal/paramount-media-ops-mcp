@@ -51,8 +51,8 @@ class PatternDetector:
     """
     
     def __init__(self):
-        self.min_confidence = 0.7
-        self.min_incidents = 3
+        self.min_confidence = 0.5
+        self.min_incidents = 2
         self._init_db()
     
     def _init_db(self):
@@ -104,6 +104,7 @@ class PatternDetector:
         patterns.extend(self._detect_co_failures(rcas))
         patterns.extend(self._detect_recurring_root_causes(rcas))
         patterns.extend(self._detect_mttr_trends(rcas))
+        patterns.extend(self._detect_repeat_offenders(rcas))
         
         # Filter by confidence and incident count
         patterns = [
@@ -280,8 +281,10 @@ class PatternDetector:
             summary_lower = rca.ai_summary.lower()
             
             # Extract key phrases
-            for phrase in ["cache", "timeout", "connection", "memory", "database", 
-                          "authentication", "rate limit", "disk", "cpu", "network"]:
+            for phrase in ["cache", "timeout", "connection", "memory", "database",
+                          "authentication", "auth", "rate limit", "disk", "cpu",
+                          "network", "cdn", "500", "error", "capacity", "latency",
+                          "drm", "payment", "streaming", "login", "bypass"]:
                 if phrase in summary_lower:
                     keywords[phrase].append(rca)
         
@@ -292,7 +295,7 @@ class PatternDetector:
                 patterns.append(DetectedPattern(
                     pattern_type="recurring_root_cause",
                     affected_services=services,
-                    confidence_score=min(len(rca_list) / 10, 1.0),
+                    confidence_score=min(0.5 + len(rca_list) / 10, 1.0),
                     incident_count=len(rca_list),
                     description=f"'{phrase}' appears in {len(rca_list)} RCA summaries",
                     first_seen=min(r.created_at for r in rca_list),
@@ -344,6 +347,30 @@ class PatternDetector:
         
         return patterns
     
+    def _detect_repeat_offenders(self, rcas) -> List[DetectedPattern]:
+        """Detect services with multiple incidents (repeat offenders)."""
+        patterns = []
+        by_service = defaultdict(list)
+        for rca in rcas:
+            if rca.service_name:
+                by_service[rca.service_name].append(rca)
+
+        for service, rca_list in by_service.items():
+            if len(rca_list) >= self.min_incidents:
+                stages = [r.stage.value for r in rca_list]
+                patterns.append(DetectedPattern(
+                    pattern_type="repeat_offender",
+                    affected_services=[service],
+                    confidence_score=min(0.5 + len(rca_list) / 10, 1.0),
+                    incident_count=len(rca_list),
+                    description=f"{service} has {len(rca_list)} incidents (stages: {', '.join(stages)})",
+                    first_seen=min(r.created_at for r in rca_list),
+                    last_seen=max(r.created_at for r in rca_list),
+                    actionable_insight=f"Prioritize reliability improvements for {service}"
+                ))
+
+        return patterns
+
     def _store_patterns(self, patterns: List[DetectedPattern]):
         """Store patterns in SQLite."""
         import json

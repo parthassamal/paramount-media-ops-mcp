@@ -115,16 +115,28 @@ class RCAPipeline:
         jira_key = jira_ticket["id"]
         service = jira_ticket.get("service", "unknown")
         
-        # Idempotency check: Return existing active RCA
+        # Idempotency check: Return existing active RCA (skip stale jira_close)
         existing = get_rca_by_jira_key(jira_key)
-        if existing and existing.stage not in (PipelineStage.COMPLETED, PipelineStage.FAILED):
-            logger.info(
-                "idempotency_hit",
-                jira=jira_key,
-                rca_id=existing.rca_id,
-                stage=existing.stage.value
+        terminal_stages = (PipelineStage.COMPLETED, PipelineStage.FAILED)
+        if existing and existing.stage not in terminal_stages:
+            stale_close = (
+                existing.stage == PipelineStage.JIRA_CLOSE
+                and existing.failure_reason
+                and "Close blocked" in existing.failure_reason
             )
-            return existing
+            if not stale_close:
+                logger.info(
+                    "idempotency_hit",
+                    jira=jira_key,
+                    rca_id=existing.rca_id,
+                    stage=existing.stage.value
+                )
+                return existing
+            logger.info(
+                "idempotency_stale_close_bypassed",
+                jira=jira_key,
+                old_rca_id=existing.rca_id,
+            )
         
         # Create new RCA record
         record = RCARecord(
@@ -257,34 +269,37 @@ class RCAPipeline:
     
     def _send_review_notification(self, record: RCARecord):
         """Send notification that test cases are ready for review."""
-        try:
-            import asyncio
-            from mcp.utils.notifications import notify
-            
-            asyncio.create_task(notify("review_pending", {
-                "rca_id": record.rca_id,
-                "jira_ticket_id": record.jira_ticket_id,
-                "cases_count": len(record.generated_test_cases or []),
-                "match_confidence": record.testrail_match_confidence,
-                "sla_deadline": "24 hours"
-            }))
-        except Exception as e:
-            logger.warning("notification_failed", event="review_pending", error=str(e))
-    
+        self._fire_notification("review_pending", {
+            "rca_id": record.rca_id,
+            "jira_ticket_id": record.jira_ticket_id,
+            "cases_count": len(record.generated_test_cases or []),
+            "match_confidence": record.testrail_match_confidence,
+            "sla_deadline": "24 hours",
+        })
+
     def _send_failure_notification(self, record: RCARecord, error: str):
         """Send notification that pipeline failed."""
+        self._fire_notification("pipeline_failed", {
+            "rca_id": record.rca_id,
+            "jira_ticket_id": record.jira_ticket_id,
+            "stage": record.stage.value,
+            "error": error[:200],
+        })
+
+    @staticmethod
+    def _fire_notification(event_name: str, payload: dict):
+        """Best-effort notification dispatch, safe in both sync and async contexts."""
+        import asyncio
+        from mcp.utils.notifications import notify
+
         try:
-            import asyncio
-            from mcp.utils.notifications import notify
-            
-            asyncio.create_task(notify("pipeline_failed", {
-                "rca_id": record.rca_id,
-                "jira_ticket_id": record.jira_ticket_id,
-                "stage": record.stage.value,
-                "error": error[:200]
-            }))
-        except Exception as e:
-            logger.warning("notification_failed", event="pipeline_failed", error=str(e))
+            loop = asyncio.get_running_loop()
+            loop.create_task(notify(event_name, payload))
+        except RuntimeError:
+            try:
+                asyncio.run(notify(event_name, payload))
+            except Exception as e:
+                logger.debug("notification_skipped", notification_event=event_name, reason=str(e))
 
     def resume_after_review(
         self,
@@ -319,21 +334,41 @@ class RCAPipeline:
             record.stage = PipelineStage.TESTRAIL_WRITE
             upsert_rca(record)
 
-            created = create_test_cases_bulk(approved_cases, record.jira_ticket_id)
-            new_case_ids = [c.get("id") for c in created if c.get("id")]
+            testrail_error = None
+            try:
+                created = create_test_cases_bulk(
+                    approved_cases, record.jira_ticket_id, service=record.service_name or ""
+                )
+                new_case_ids = [c.get("id") for c in created if c.get("id")]
+            except Exception as exc:
+                logger.warning(
+                    "testrail_write_failed",
+                    rca_id=record.rca_id,
+                    testrail_error=str(exc)[:300],
+                )
+                testrail_error = str(exc)[:300]
+                new_case_ids = []
 
             record.testrail_created_case_ids = new_case_ids
+            if testrail_error:
+                record.failure_reason = f"TestRail write deferred: {testrail_error}"
 
             if new_case_ids:
-                verification_run = create_rca_verification_run(
-                    rca_id=record.rca_id,
-                    jira_ticket_id=record.jira_ticket_id,
-                    case_ids=new_case_ids
-                )
-                record.testrail_verification_run_id = verification_run.get("id")
+                try:
+                    verification_run = create_rca_verification_run(
+                        rca_id=record.rca_id,
+                        jira_ticket_id=record.jira_ticket_id,
+                        case_ids=new_case_ids,
+                    )
+                    record.testrail_verification_run_id = verification_run.get("id")
+                except Exception as exc:
+                    logger.warning("verification_run_failed", rca_id=record.rca_id, reason=str(exc)[:200])
 
                 if record.regression_run_id:
-                    add_cases_to_regression_run(record.regression_run_id, new_case_ids)
+                    try:
+                        add_cases_to_regression_run(record.regression_run_id, new_case_ids)
+                    except Exception as exc:
+                        logger.warning("regression_append_failed", rca_id=record.rca_id, reason=str(exc)[:200])
 
             upsert_rca(record)
 
@@ -504,6 +539,25 @@ class RCAPipeline:
 
         record.stage = PipelineStage.JIRA_CLOSE
         record.record_stage_timestamp(PipelineStage.JIRA_CLOSE)
+
+        # Auto-populate root_cause from ai_summary if not explicitly set
+        if not record.root_cause and record.ai_summary:
+            record.root_cause = record.ai_summary
+
+        # Derive timeline from stage_timestamps if not explicitly set
+        if not record.timeline and record.stage_timestamps:
+            record.timeline = [
+                f"{stage}: {ts}" for stage, ts in record.stage_timestamps.items()
+            ]
+
+        # Add default remediation if none defined
+        if not record.remediation_owners:
+            record.add_remediation_action(
+                action=f"Investigate and resolve {record.jira_ticket_id}",
+                owner=record.reviewer_id or "unassigned",
+                due_days=7,
+            )
+
         upsert_rca(record)
 
         # VALIDATE ARTIFACT BEFORE CLOSE - this is the gate

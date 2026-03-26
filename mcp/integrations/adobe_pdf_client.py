@@ -560,6 +560,8 @@ class AdobePDFClient:
         timestamp = summary_data.get('timestamp', datetime.now().isoformat())
         figma_sync = summary_data.get('figma_sync', False)
         figma_image_url = summary_data.get('figma_image_url')
+        top_incident = summary_data.get('top_incident')
+        governance = summary_data.get('governance', {})
         
         # Add Figma dashboard screenshot/design if available
         hero_image = ""
@@ -701,14 +703,17 @@ class AdobePDFClient:
             </div>
             
             <div class="section">
-                <h2>🤖 AI-Powered Insights</h2>
+                <h2>🤖 Production Issues</h2>
                 <ul>
                     {''.join([f"<li>{insight}</li>" for insight in insights])}
                 </ul>
             </div>
             
+            {self._render_top_incident_section(top_incident)}
+            {self._render_governance_section(governance)}
+            
             <div class="section">
-                <h2>⚡ Strategic Recommendations</h2>
+                <h2>⚡ Recommendations &amp; Next Actions</h2>
                 <ol>
                     {''.join([f"<li>{rec}</li>" for rec in recommendations])}
                 </ol>
@@ -811,6 +816,46 @@ class AdobePDFClient:
                 </div>
             """)
         return ''.join(cards)
+
+    @staticmethod
+    def _render_top_incident_section(top_incident: dict | None) -> str:
+        if not top_incident:
+            return ""
+        return f"""
+            <div class="section" style="border-left-color: #EF4444;">
+                <h2>🚨 Top Priority Incident</h2>
+                <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                    <tr><td style="color:#94A3B8; padding:6px 0; width:180px;">Incident ID</td>
+                        <td style="color:#F1F5F9; font-weight:600;">{top_incident.get('id', 'N/A')}</td></tr>
+                    <tr><td style="color:#94A3B8; padding:6px 0;">Summary</td>
+                        <td style="color:#F1F5F9;">{top_incident.get('summary', 'N/A')}</td></tr>
+                    <tr><td style="color:#94A3B8; padding:6px 0;">Priority Score</td>
+                        <td style="color:#FBBF24; font-weight:700; font-size:18px;">{top_incident.get('priority_score', 'N/A')}</td></tr>
+                    <tr><td style="color:#94A3B8; padding:6px 0;">Recommended Action</td>
+                        <td style="color:#60A5FA; font-weight:600;">{top_incident.get('top_action', 'Review required')}</td></tr>
+                </table>
+            </div>
+        """
+
+    @staticmethod
+    def _render_governance_section(governance: dict) -> str:
+        if not governance or not governance.get('total_reviews'):
+            return ""
+        return f"""
+            <div class="section" style="border-left-color: #A855F7;">
+                <h2>🛡️ Governance &amp; Approvals</h2>
+                <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                    <tr><td style="color:#94A3B8; padding:6px 0; width:180px;">Total Reviews</td>
+                        <td style="color:#F1F5F9; font-weight:600;">{governance.get('total_reviews', 0)}</td></tr>
+                    <tr><td style="color:#94A3B8; padding:6px 0;">Awaiting Review</td>
+                        <td style="color:#FBBF24; font-weight:600;">{governance.get('awaiting_review', 0)}</td></tr>
+                    <tr><td style="color:#94A3B8; padding:6px 0;">Approved</td>
+                        <td style="color:#34D399; font-weight:600;">{governance.get('approved', 0)}</td></tr>
+                    <tr><td style="color:#94A3B8; padding:6px 0;">Rejected</td>
+                        <td style="color:#EF4444; font-weight:600;">{governance.get('rejected', 0)}</td></tr>
+                </table>
+            </div>
+        """
 
 
 def create_adobe_pdf_client() -> Optional[AdobePDFClient]:

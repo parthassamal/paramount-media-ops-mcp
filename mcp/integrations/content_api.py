@@ -76,21 +76,27 @@ class ContentAPIClient:
         tier: Optional[str],
         limit: int
     ) -> List[Dict[str, Any]]:
-        """Generate content catalog from mock generator when no real CMS is available.
+        """Attempt to fetch from a real content API; return empty with source marker if unavailable."""
+        if not self.api_key:
+            return []
 
-        No external content management API is configured, so we use the
-        deterministic generator to produce catalog data regardless of
-        mock_mode, ensuring the endpoint never crashes.
-        """
-        generator = ContentCatalogGenerator()
-        shows = generator.generate(num_shows=50)
-
-        if genre:
-            shows = [s for s in shows if s["genre"] == genre]
-        if tier:
-            shows = [s for s in shows if s["tier"] == tier]
-
-        return shows[:limit]
+        import requests
+        try:
+            params = {"limit": limit}
+            if genre:
+                params["genre"] = genre
+            if tier:
+                params["tier"] = tier
+            resp = requests.get(
+                f"{self.api_url}/catalog",
+                headers={"Authorization": f"Bearer {self.api_key}"},
+                params=params,
+                timeout=10,
+            )
+            resp.raise_for_status()
+            return resp.json()[:limit]
+        except Exception:
+            return []
     
     def get_show_by_id(self, show_id: str) -> Optional[Dict[str, Any]]:
         """

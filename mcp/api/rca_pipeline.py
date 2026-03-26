@@ -317,20 +317,51 @@ async def approve_and_write(request: ApproveReviewRequest):
     """
     Human review gate + TestRail write in one call.
     Approves generated cases, writes them to TestRail, creates verification run.
+    Also marks the review queue item as approved.
     """
+    from mcp.db.review_store import get_review_by_rca, approve_review as approve_review_item
+
     try:
         pipeline = RCAPipeline()
         record = pipeline.resume_after_review(
             request.rca_id, request.reviewer_id, request.notes
         )
+        testrail_status = "written" if record.testrail_created_case_ids else "deferred"
+
+        review = get_review_by_rca(request.rca_id)
+        if review and review.status.value == "pending":
+            try:
+                approve_review_item(review.review_id, request.reviewer_id, request.notes)
+            except Exception:
+                pass
+
         return {
             "stage": record.stage.value,
+            "testrail_status": testrail_status,
             "testrail_cases_created": record.testrail_created_case_ids,
             "verification_run_id": record.testrail_verification_run_id,
             "regression_scope": record.regression_scope,
-            "impacted_components": record.impacted_components
+            "impacted_components": record.impacted_components,
+            "testrail_note": record.failure_reason if testrail_status == "deferred" else None,
         }
     except ValueError as e:
+        review = get_review_by_rca(request.rca_id)
+        if review and review.status.value == "pending":
+            try:
+                approve_review_item(review.review_id, request.reviewer_id, request.notes)
+            except Exception:
+                pass
+            existing = get_rca(request.rca_id)
+            if existing:
+                return {
+                    "stage": existing.stage.value,
+                    "testrail_status": "already_processed",
+                    "testrail_cases_created": existing.testrail_created_case_ids or [],
+                    "verification_run_id": existing.testrail_verification_run_id,
+                    "regression_scope": existing.regression_scope or [],
+                    "impacted_components": existing.impacted_components or [],
+                    "testrail_note": "RCA already progressed past review stage",
+                }
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.exception("Review approval failed", error=str(e))

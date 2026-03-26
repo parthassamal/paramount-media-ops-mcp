@@ -29,7 +29,42 @@ const sections = [
     color: "text-blue-400",
     bg: "bg-blue-500/10",
     border: "border-blue-500/30",
-    content: `Paramount+ AI Operations Dashboard is an enterprise-grade operational intelligence platform that unifies production issue tracking, streaming quality monitoring, and AI-powered root cause analysis into a single real-time view. It connects to live external systems (Jira, New Relic, Datadog, TestRail, Confluence) and surfaces actionable insights for operations teams. The platform is production-ready with idempotency, retry/resume, concurrency control, notifications, and cryptographic integrity verification.`,
+    content: `Paramount+ Media Ops is an incident intelligence and RCA actioning control plane. The core promise is: detect the highest-impact incident, explain it with normalized evidence, recommend the next action with confidence and business impact, route approval when needed, generate verification tests, and track measurable recovery.`,
+  },
+  {
+    id: "operator-loop",
+    icon: Users,
+    title: "Operator workflow (Mission Control)",
+    color: "text-sky-400",
+    bg: "bg-sky-500/10",
+    border: "border-sky-500/30",
+    content: null,
+    list: [
+      {
+        label: "1) Detect",
+        desc: "Mission Control ranks open incidents using deterministic decision scoring (operational severity, subscriber impact, business risk, confidence).",
+      },
+      {
+        label: "2) Explain",
+        desc: "Evidence is normalized into a single bundle and rendered with timeline events, source references, and blast radius context.",
+      },
+      {
+        label: "3) Recommend",
+        desc: "Every action proposal includes confidence, rationale, expected impact, owner, and validation plan.",
+      },
+      {
+        label: "4) Approve",
+        desc: "High-risk actions require review. Governance state and SLA are visible in the UI and persisted in audit logs.",
+      },
+      {
+        label: "5) Verify",
+        desc: "Approved actions generate or run targeted verification tests with TestRail writeback and post-fix status checks.",
+      },
+      {
+        label: "6) Measure",
+        desc: "Cycle-time, review latency, and action outcomes are tracked so teams can prove recovery and improve runbooks.",
+      },
+    ],
   },
   {
     id: "data-sources",
@@ -111,6 +146,30 @@ const sections = [
     content: null,
     list: [
       {
+        label: "Mission Control (Home)",
+        desc: "Start every shift here. It surfaces the top-priority incident, system mode badge (mock/hybrid/live), pending approvals, recommended next action, and prioritized queue. Click any incident row to open its detail page.",
+      },
+      {
+        label: "Incident Detail Page",
+        desc: "Click any incident in the Mission Control queue to see full detail: decision scoring breakdown (operational severity, subscriber impact, business risk, confidence), ranked recommended actions with confidence/rationale/validation plan, incident timeline, governance reviews with approve/reject, blast radius graph, and verification status.",
+      },
+      {
+        label: "Incident Timeline",
+        desc: "Chronological event view showing Jira, New Relic, Datadog, and pipeline events for an incident. Each event shows source badge, timestamp, severity, and summary. Evidence completeness score indicates how much telemetry is available.",
+      },
+      {
+        label: "Governance & Approvals",
+        desc: "High-risk actions (rollback, restart) require human approval before execution. The governance panel shows pending reviews with SLA countdown, risk tier, and approve/reject buttons. All transitions are logged in a queryable audit trail. Access via the sidebar or within any incident detail page.",
+      },
+      {
+        label: "Blast Radius Graph",
+        desc: "Radial visualization of impacted services for an incident. The primary service is at the center; downstream/upstream dependencies are shown with confidence scores. Higher confidence (red) means stronger impact; lower (gray) means weaker coupling.",
+      },
+      {
+        label: "Ops Chatbot",
+        desc: "The chatbot in Mission Control uses tool-routed context (mission summary, incident detail, review queue) to answer operator questions with citations, tool trace, and quality score. Use it for 'what should we do next', approval checks, and incident stage lookups.",
+      },
+      {
         label: "Executive KPIs (Top Banner)",
         desc: "At-a-glance metrics: total issues, critical count, live integrations, and active production issues. Sparkline trends show 7-day movement. Click the refresh indicator to see real-time updates.",
       },
@@ -136,11 +195,15 @@ const sections = [
       },
       {
         label: "Production Issues Table",
-        desc: "Full table of all Jira issues with severity, status, cost impact, delay days, and RCA pipeline stage. Each row shows a color-coded badge for the pipeline stage. Click 'Run RCA' to trigger the pipeline for issues without an active RCA.",
+        desc: "Full table of all Jira issues with severity, status, cost impact, delay days, and RCA pipeline stage. Each row shows a color-coded badge for the pipeline stage. Click 'Run RCA' to trigger the pipeline for issues without an active RCA. All tables support pagination with configurable page sizes (10/25/50 per page).",
       },
       {
         label: "Export PDF",
-        desc: "Click 'Export PDF' in the header to generate an executive report with live data. Uses HTML-to-PDF fallback if Adobe SDK is not configured.",
+        desc: "Click 'Export PDF' in the header to generate an executive report. The PDF includes KPI summary, top incidents with severity and cost impact, decision engine scoring, recommended actions, governance status, and integration health. Uses HTML-to-PDF fallback if Adobe SDK is not configured.",
+      },
+      {
+        label: "Light / Dark Mode",
+        desc: "Toggle between light and dark themes using the sun/moon icon in the header. All pages, sidebar, and components respond to the theme switch via CSS custom properties.",
       },
       {
         label: "RCA Pipeline (API)",
@@ -159,7 +222,7 @@ const sections = [
     list: [
       {
         label: "Backend",
-        desc: "FastAPI (Python 3.10+) with live integrations to Jira, New Relic, Datadog, TestRail, and Confluence. SQLite for RCA audit trail (Postgres-compatible syntax for easy migration). TTL caching layer. API key authentication via X-API-Key header.",
+        desc: "FastAPI (Python 3.10+) with live integrations to Jira Cloud (PROD project, /search/jql POST), New Relic (GraphQL NerdGraph, account 7492750), Datadog (us5 site, SDK-based), TestRail (project 2, suite 11, sections 52/53 with service-based routing), and Confluence. SQLite for RCA audit trail (Postgres-compatible syntax). TTL caching layer. API key authentication via X-API-Key header.",
       },
       {
         label: "Frontend",
@@ -238,6 +301,14 @@ const sections = [
       {
         label: "Pipeline Health Endpoint",
         desc: "GET /api/rca/health returns scheduler status, heartbeat, metrics (success rate, avg cycle time), and pending review count. Use for monitoring the pipeline itself.",
+      },
+      {
+        label: "Governance Runtime States",
+        desc: "Actions transition through: proposed, awaiting_review, approved, rejected, expired, executed, failed. These states are auditable and exposed to operators as first-class runtime signals. The governance API (GET /api/governance/reviews, POST .../approve, POST .../reject) powers the UI panel.",
+      },
+      {
+        label: "Decision Engine",
+        desc: "Deterministic scoring model: operational_severity (35%), business_risk (30%), subscriber_impact (20%), confidence (15%). Produces ranked action recommendations with risk tier, owner, validation plan, and escalation path. No ML dependency for core flow.",
       },
       {
         label: "Dead-Man Switch",

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Clock, CheckCircle, XCircle, AlertTriangle, Users, ExternalLink, Loader2 } from 'lucide-react';
+import { Pagination, usePagination } from './ui/Pagination';
 import { API_BASE } from '../../config/api';
 
 type ReviewItem = {
@@ -42,6 +43,8 @@ export function HumanReviewQueue({ fullPage = false }: HumanReviewQueueProps) {
   const [error, setError] = useState<string | null>(null);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
   const [approving, setApproving] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -162,7 +165,7 @@ export function HumanReviewQueue({ fullPage = false }: HumanReviewQueueProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {reviews.map((item) => {
+          {usePagination(reviews, pageSize, page).map((item) => {
             const timeInfo = formatTimeRemaining(item.sla_deadline);
             const isProcessing = approving === item.review_id;
             
@@ -218,6 +221,15 @@ export function HumanReviewQueue({ fullPage = false }: HumanReviewQueueProps) {
               </div>
             );
           })}
+          {reviews.length > 0 && (
+            <Pagination
+              currentPage={page}
+              totalItems={reviews.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          )}
         </div>
       )}
 

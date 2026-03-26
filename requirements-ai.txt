@@ -1,5 +1,5 @@
 # AI/ML Dependencies for Paramount+ Media Operations MCP Server
-# Patent-Worthy AI Stack - Zero External API Dependencies
+# Advanced AI Stack - Zero External API Dependencies
 
 # ==========================================================================
 # Core Machine Learning

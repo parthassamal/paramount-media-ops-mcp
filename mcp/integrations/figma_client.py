@@ -169,10 +169,23 @@ class FigmaClient:
         method: str = "GET",
         params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Synchronous wrapper for API requests."""
-        return asyncio.get_event_loop().run_until_complete(
-            self._make_request_async(endpoint, method, params)
-        )
+        """Synchronous wrapper for API requests (safe inside running event loops)."""
+        import httpx
+
+        url = f"{self.base_url}/{endpoint}"
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                response = client.request(
+                    method=method,
+                    url=url,
+                    headers=self._get_headers(),
+                    params=params,
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPError as e:
+            logger.error("figma_api_sync_error", endpoint=endpoint, error=str(e))
+            raise
     
     # =========================================================================
     # File Operations

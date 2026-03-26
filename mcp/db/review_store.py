@@ -155,22 +155,36 @@ def reject_review(review_id: str, reviewer_id: str, notes: str = "") -> ReviewIt
 
 
 def get_pending_reviews() -> List[ReviewItem]:
-    """Fetch all pending review items, marking expired ones."""
+    """Fetch all pending review items, marking expired or orphaned ones."""
+    from mcp.db.rca_store import get_rca
+
     conn = _get_conn()
     rows = conn.execute(
         "SELECT data FROM review_queue WHERE status = 'pending' ORDER BY created_at ASC"
     ).fetchall()
 
     items = []
-    now = datetime.utcnow()
     for row in rows:
         item = ReviewItem.model_validate_json(row["data"])
+
+        rca = get_rca(item.rca_id)
+        if not rca or rca.stage.value not in ("review_pending", "test_generation"):
+            new_status = ReviewStatus.EXPIRED if not rca else ReviewStatus.APPROVED
+            item.status = new_status
+            conn.execute(
+                "UPDATE review_queue SET status = ?, data = ? WHERE review_id = ?",
+                (item.status.value, item.model_dump_json(), item.review_id),
+            )
+            continue
+
         if item.is_overdue:
             item.status = ReviewStatus.EXPIRED
             conn.execute(
                 "UPDATE review_queue SET status = ?, data = ? WHERE review_id = ?",
-                (item.status.value, item.model_dump_json(), item.review_id)
+                (item.status.value, item.model_dump_json(), item.review_id),
             )
+            continue
+
         items.append(item)
 
     conn.commit()

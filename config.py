@@ -390,7 +390,7 @@ class Settings(BaseSettings):
     testrail_rca_section_id: int = Field(default=0, description="Section for AI-generated RCA cases")
     
     # ==========================================================================
-    # Local LLM Configuration (patent-safe, no external API key required)
+    # Local LLM Configuration (self-hosted, no external API key required)
     # ==========================================================================
     local_llm_url: Optional[str] = Field(
         default=None,

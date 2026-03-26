@@ -94,17 +94,11 @@ class FailureTriager:
         
         # Get run results
         results = get_run_results(run_id)
-        if not results.get("completed"):
-            return {
-                "run_id": run_id,
-                "error": "Run not yet complete",
-                "status": "pending"
-            }
+        is_complete = results.get("completed", False)
         
-        # Get failed test details
-        tests = _tr("GET", f"get_tests/{run_id}")
-        if not tests:
-            tests = []
+        # Get test details (paginated response)
+        raw_tests = _tr("GET", f"get_tests/{run_id}")
+        tests = raw_tests.get("tests", []) if isinstance(raw_tests, dict) else (raw_tests if isinstance(raw_tests, list) else [])
         
         failed_tests = [t for t in tests if t.get("status_id") == 5]  # 5 = Failed
         
@@ -144,9 +138,11 @@ class FailureTriager:
         
         result = {
             "run_id": run_id,
+            "run_complete": is_complete,
             "total_tests": len(tests),
             "passed": results.get("passed_count", 0),
             "failed": len(failed_tests),
+            "untested": results.get("untested_count", 0),
             "triaged_failures": [
                 {
                     "case_id": t.case_id,

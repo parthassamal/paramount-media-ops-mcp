@@ -49,7 +49,9 @@ async def get_figma_css(file_id: Optional[str] = None):
         return {"css": css}
     except Exception as e:
         logger.error("figma_css_error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        client = FigmaClient(mock_mode=True)
+        css = client.export_to_css_variables("mock-id")
+        return {"css": css}
 
 @router.get("/images")
 async def get_figma_images(ids: Optional[str] = None, file_id: Optional[str] = None, format: str = "png"):
@@ -60,17 +62,15 @@ async def get_figma_images(ids: Optional[str] = None, file_id: Optional[str] = N
         client = FigmaClient()
         file_id = file_id or settings.figma_file_id
         ids = ids or settings.figma_hero_node_id
-        
-        if not file_id:
-            raise HTTPException(status_code=400, detail="Figma File ID is not configured")
-        if not ids:
-            raise HTTPException(status_code=400, detail="Figma Node IDs are not provided")
-            
+
+        if not file_id or not ids:
+            return {"images": {}}
+
         images = client.get_images(file_id, ids, format=format)
         return {"images": images}
     except Exception as e:
         logger.error("figma_images_error", error=str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"images": {}}
 
 @router.get("/design-system")
 async def get_full_design_system():

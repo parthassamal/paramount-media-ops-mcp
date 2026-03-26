@@ -4,7 +4,7 @@ Computer Vision Engine for Content Intelligence.
 Uses CLIP (Contrastive Language-Image Pre-training) for zero-shot
 image classification and content analysis.
 
-Patent-worthy features:
+Key features:
 - Zero-shot content categorization without training data
 - Quality assessment pipeline for streaming thumbnails
 - Visual similarity search for content recommendations

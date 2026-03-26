@@ -55,25 +55,48 @@ export function StreamingQOE() {
         const highCount = issues.filter((i) => i.severity === 'high' || /\bP2\b/.test(i.summary)).length;
         const issueWeight = criticalCount * 2 + highCount;
 
-        const seededNoise = [0.12, -0.23, 0.07, -0.31, 0.18, -0.05, 0.26];
-        const hours = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'];
-        const baseRate = nrOk ? 1.2 : 3.0;
-        setBufferingData(hours.map((time, i) => {
-          const peakFactor = i >= 3 && i <= 5 ? 1.5 : 1.0;
-          const issueFactor = 1 + issueWeight * 0.15;
-          return { time, value: Math.round((baseRate * peakFactor * issueFactor + seededNoise[i]) * 100) / 100 };
-        }));
+        let qoeLoaded = false;
+        try {
+          const qoeRes = await fetch(`${API_BASE}/api/streaming/qoe/metrics`);
+          if (qoeRes.ok) {
+            const qoe = await qoeRes.json();
+            if (qoe.buffering_ratio != null) {
+              const hours = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'];
+              const br = typeof qoe.buffering_ratio === 'number' ? qoe.buffering_ratio * 100 : 2.0;
+              setBufferingData(hours.map((time, i) => {
+                const peakFactor = i >= 3 && i <= 5 ? 1.15 : 1.0;
+                return { time, value: Math.round(br * peakFactor * 100) / 100 };
+              }));
+              const vsfHours = ['6AM', '9AM', '12PM', '3PM', '6PM', '9PM', '12AM'];
+              const vsf = typeof qoe.video_start_failures === 'number' ? qoe.video_start_failures * 100 : 0.8;
+              setVsfData(vsfHours.map((hour, i) => {
+                const peak = i >= 3 ? 1.1 : 1.0;
+                return { hour, failures: Math.round(vsf * peak * 100) / 100 };
+              }));
+              const rawScore = typeof qoe.ebvs === 'number' ? qoe.ebvs : (10 - br - vsf * 2);
+              setEbvsScore(Math.round(Math.max(0, Math.min(10, rawScore)) * 10) / 10);
+              qoeLoaded = true;
+            }
+          }
+        } catch { /* QoE endpoint unavailable -- fall through to Jira-derived */ }
 
-        const vsfNoise = [0.08, 0.15, 0.22, 0.31, 0.12, 0.19, 0.05];
-        const vsfHours = ['6AM', '9AM', '12PM', '3PM', '6PM', '9PM', '12AM'];
-        const vsfBase = nrOk ? 0.5 : 1.5;
-        setVsfData(vsfHours.map((hour, i) => {
-          const peak = i >= 3 ? 1.3 : 1.0;
-          return { hour, failures: Math.round((vsfBase * peak + vsfNoise[i] + criticalCount * 0.2) * 100) / 100 };
-        }));
-
-        const score = nrOk ? Math.max(5, 9 - issueWeight * 0.5) : Math.max(3, 6 - issueWeight * 0.5);
-        setEbvsScore(Math.round(score * 10) / 10);
+        if (!qoeLoaded) {
+          const hours = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'];
+          const baseRate = nrOk ? 1.2 : 3.0;
+          setBufferingData(hours.map((time, i) => {
+            const peakFactor = i >= 3 && i <= 5 ? 1.5 : 1.0;
+            const issueFactor = 1 + issueWeight * 0.15;
+            return { time, value: Math.round((baseRate * peakFactor * issueFactor) * 100) / 100 };
+          }));
+          const vsfHours = ['6AM', '9AM', '12PM', '3PM', '6PM', '9PM', '12AM'];
+          const vsfBase = nrOk ? 0.5 : 1.5;
+          setVsfData(vsfHours.map((hour, i) => {
+            const peak = i >= 3 ? 1.3 : 1.0;
+            return { hour, failures: Math.round((vsfBase * peak + criticalCount * 0.2) * 100) / 100 };
+          }));
+          const score = nrOk ? Math.max(5, 9 - issueWeight * 0.5) : Math.max(3, 6 - issueWeight * 0.5);
+          setEbvsScore(Math.round(score * 10) / 10);
+        }
       } catch (err: any) {
         console.error('StreamingQOE fetch error:', err);
         setError(err?.message || 'Failed to load streaming data');

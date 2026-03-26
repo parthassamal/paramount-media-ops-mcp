@@ -124,16 +124,37 @@ def get_automation_status(case_id: str) -> Tuple[bool, Optional[str]]:
 # WRITE Operations
 # =============================================================================
 
+SERVICE_SECTION_MAP: Dict[str, int] = {
+    "auth": 52,
+    "authentication": 52,
+    "login": 52,
+    "cdn": 53,
+    "edge": 53,
+    "streaming": 53,
+}
+
+
+def _resolve_section(service: str, explicit_id: int = None) -> int:
+    """Pick the TestRail section for a service, falling back to config default."""
+    if explicit_id:
+        return explicit_id
+    mapped = SERVICE_SECTION_MAP.get(service.lower().strip())
+    if mapped:
+        return mapped
+    return settings.testrail_rca_section_id or 52
+
+
 def create_test_case(
     generated_case: dict,
     jira_ticket_id: str,
-    section_id: int = None
+    section_id: int = None,
+    service: str = "",
 ) -> dict:
     """
     Write a single AI-generated test case into TestRail.
     Maps generated fields to TestRail's add_case API payload.
     """
-    section_id = section_id or settings.testrail_rca_section_id
+    section_id = _resolve_section(service, section_id)
     if not section_id:
         raise ServiceError("TestRail RCA section ID not configured", service="testrail")
 
@@ -157,7 +178,7 @@ def create_test_case(
         "custom_preconds": generated_case.get("preconditions", ""),
         "custom_steps_separated": steps,
         "custom_expected": steps[-1]["expected"] if steps else "",
-        "custom_automation_type": 2  # To be automated
+        "custom_automation_type": 0
     }
 
     new_case = _tr("POST", f"add_case/{section_id}", payload)
@@ -168,14 +189,15 @@ def create_test_case(
 def create_test_cases_bulk(
     approved_cases: List[dict],
     jira_ticket_id: str,
-    section_id: int = None
+    section_id: int = None,
+    service: str = "",
 ) -> List[dict]:
     """Write all human-approved AI-generated test cases into TestRail."""
     created = []
     for case in approved_cases:
-        new_case = create_test_case(case, jira_ticket_id, section_id)
+        new_case = create_test_case(case, jira_ticket_id, section_id, service=service)
         created.append(new_case)
-        time.sleep(0.2)  # Respect rate limits
+        time.sleep(0.2)
     logger.info("Bulk TestRail write complete", count=len(created), jira=jira_ticket_id)
     return created
 
@@ -237,10 +259,9 @@ def get_run_results(run_id: int) -> Dict[str, Any]:
     if not run:
         return {"completed": False, "total": 0, "all_passed": False}
     
-    # Get test results for this run
-    tests = _tr("GET", f"get_tests/{run_id}")
-    if not tests:
-        tests = []
+    # Get test results for this run (paginated response)
+    raw = _tr("GET", f"get_tests/{run_id}")
+    tests = raw.get("tests", []) if isinstance(raw, dict) else (raw if isinstance(raw, list) else [])
     
     # TestRail status IDs: 1=Passed, 2=Blocked, 3=Untested, 4=Retest, 5=Failed
     passed = 0
@@ -342,9 +363,9 @@ def find_testrail_match(
 
         steps_text = " ".join([
             s.get("content", "")
-            for s in case.get("custom_steps_separated", [])
+            for s in (case.get("custom_steps_separated") or [])
         ])
-        incident_text = " ".join(incident_steps)
+        incident_text = " ".join(incident_steps or [])
         step_score = SequenceMatcher(
             None, incident_text.lower(), steps_text.lower()
         ).ratio() if steps_text else 0.0

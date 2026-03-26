@@ -37,7 +37,19 @@ from mcp.tools import (
     create_forecast_revenue,
     create_generate_campaign
 )
-from mcp.api import jira_router, confluence_router, analytics_router, streaming_router, figma_router, adobe_router, ai_router, rca_router
+from mcp.api import (
+    jira_router,
+    confluence_router,
+    analytics_router,
+    streaming_router,
+    figma_router,
+    adobe_router,
+    ai_router,
+    rca_router,
+    mission_control_router,
+    chatbot_router,
+    governance_router,
+)
 from mcp.api.events import router as events_router
 from mcp.api.phase2_tools import router as phase2_router
 
@@ -411,8 +423,11 @@ app.include_router(analytics_router)
 app.include_router(streaming_router)
 app.include_router(figma_router)
 app.include_router(adobe_router)
-app.include_router(ai_router)  # Patent-worthy AI services
+app.include_router(ai_router)  # AI services
 app.include_router(rca_router)  # RCA Pipeline v2
+app.include_router(mission_control_router)  # Mission control command-center APIs
+app.include_router(chatbot_router)  # Operator chatbot assistant
+app.include_router(governance_router)  # Governance action review & audit
 app.include_router(phase2_router)  # Phase 2 QA Intelligence
 app.include_router(events_router)  # SSE real-time events
 
